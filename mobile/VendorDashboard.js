@@ -1,5 +1,5 @@
 // === VendorDashboard.js ===
-// A Supabase-connected vendor dashboard with quotes and metrics
+// A Supabase-connected vendor dashboard with quotes, metrics, and urgent dispatch
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
@@ -12,6 +12,8 @@ const supabase = createClient(
 export default function VendorDashboard({ vendorLocation, radius, category, vendorEmail }) {
   const [tickets, setTickets] = useState([]);
   const [submittedQuotes, setSubmittedQuotes] = useState({});
+  const [acceptedTicketId, setAcceptedTicketId] = useState(null);
+  const [urgentTicket, setUrgentTicket] = useState(null);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -64,9 +66,28 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
     }
   };
 
+  const fetchUrgentTicket = async () => {
+    const { data } = await supabase.rpc('get_urgent_ticket', {
+      lat: vendorLocation.lat,
+      lon: vendorLocation.lon,
+      category_filter: category
+    });
+    if (data) setUrgentTicket(data);
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <h2>Jobs in your area ({category})</h2>
+
+      {urgentTicket && (
+        <div style={{ border: '2px solid red', padding: 10, marginBottom: 20 }}>
+          <h3>🚨 Urgent Job (Priority Dispatch)</h3>
+          <p><strong>Summary:</strong> {urgentTicket.assistant_reply}</p>
+          <p><strong>Required Immediately</strong></p>
+          <button onClick={() => alert('Marked as en route!')}>🚐 Accept Urgent Job</button>
+        </div>
+      )}
+
       {tickets.map((ticket, idx) => (
         <div key={idx} style={{ border: '1px solid #ccc', margin: '10px 0', padding: 10 }}>
           <p><strong>Summary:</strong> {ticket.assistant_reply}</p>
@@ -97,6 +118,10 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
           )}
         </div>
       ))}
+
+      <button style={{ marginTop: 30 }} onClick={fetchUrgentTicket}>
+        🔍 Check for Urgent Dispatch
+      </button>
     </div>
   );
 }
