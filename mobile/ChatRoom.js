@@ -70,3 +70,23 @@ export default function ChatRoom({ chatRoomId, sender }) {
     </div>
   );
 }
+useEffect(() => {
+  const fetchQuoteStatus = async () => {
+    const { data } = await supabase
+      .from('quotes')
+      .select('*')
+      .eq('log_id', chatRoomId)
+      .eq('status', 'accepted')
+      .maybeSingle();
+
+    if (data) {
+      setMessages(prev => [
+        ...prev,
+        { id: 'system-accepted', sender: 'system', message: '✅ Your job has been accepted!' }
+      ]);
+    }
+  };
+
+  fetchQuoteStatus();
+}, [chatRoomId]);
+
