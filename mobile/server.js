@@ -11,6 +11,12 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// === Logging Middleware ===
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
@@ -46,7 +52,6 @@ app.post('/chat', async (req, res) => {
       res.write(`data: ${content}\n\n`);
     }
 
-    // Save to chat_logs
     await supabase.from('chat_logs').insert([{
       user_input: text || '[image]',
       assistant_reply: fullReply,
@@ -64,7 +69,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// === /estimate/:summary – cost range lookup ===
+// === /estimate/:summary ===
 app.get('/estimate/:summary', async (req, res) => {
   const summary = decodeURIComponent(req.params.summary);
   try {
@@ -91,7 +96,7 @@ app.get('/estimate/:summary', async (req, res) => {
   }
 });
 
-// === /jobs-for-vendor/:vendorId – filter relevant jobs ===
+// === /jobs-for-vendor/:vendorId ===
 function isWithinRadius(lat1, lon1, lat2, lon2, radiusKm) {
   const toRad = d => d * Math.PI / 180;
   const R = 6371;
@@ -112,7 +117,6 @@ app.get('/jobs-for-vendor/:vendorId', async (req, res) => {
       .select('*').eq('id', vendorId).single();
 
     const { lat: vLat, lon: vLon, radius_km, category } = vendor;
-
     const { data: jobs } = await supabase.from('chat_logs').select('*');
     const filtered = jobs.filter(job => {
       const loc = job.user_location?.coordinates;
@@ -127,7 +131,7 @@ app.get('/jobs-for-vendor/:vendorId', async (req, res) => {
   }
 });
 
-// === /rfq-dashboard – customer landing page ===
+// === /rfq-dashboard ===
 app.get('/rfq-dashboard', async (req, res) => {
   try {
     const { data: logs } = await supabase
@@ -151,7 +155,7 @@ app.get('/rfq-dashboard', async (req, res) => {
   }
 });
 
-// === ✅ URGENT VENDOR DISPATCH ===
+// === /dispatch_urgent_vendor ===
 app.post('/dispatch_urgent_vendor', async (req, res) => {
   const { chat_history } = req.body;
   const chatRoomId = uuidv4();
@@ -190,7 +194,7 @@ app.post('/dispatch_urgent_vendor', async (req, res) => {
   return res.json({ success: true, chat_room_id: chatRoomId });
 });
 
-// === /submit-rfq – fallback regular ticket creation ===
+// === /submit-rfq ===
 app.post('/submit-rfq', async (req, res) => {
   const { assistant_reply, severity='medium', category, user_location, image_url, user_email } = req.body;
   const expires_at = new Date();
@@ -209,6 +213,13 @@ app.post('/submit-rfq', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// === /health check ===
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// === Home Route ===
 app.get('/', (req, res) => {
   res.send(`
     <html>
@@ -218,11 +229,19 @@ app.get('/', (req, res) => {
         <p>This is your backend API. Use the mobile app or test endpoints with Postman or curl.</p>
         <ul>
           <li><a href="/rfq-dashboard">📋 View RFQ Dashboard</a></li>
+          <li><a href="/health">🩺 Health Check</a></li>
         </ul>
       </body>
     </html>
   `);
 });
+
+// === Global Error Handler ===
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Something went wrong on the server' });
+});
+
 // === Start Server ===
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
