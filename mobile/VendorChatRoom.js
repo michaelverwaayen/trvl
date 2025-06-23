@@ -67,3 +67,27 @@ export default function VendorChatRoom({ chatRoomId, vendorEmail }) {
     </div>
   );
 }
+<div style={{ marginTop: 20 }}>
+  <h4>Submit Quote</h4>
+  <form
+    onSubmit={async (e) => {
+      e.preventDefault();
+      const quote = e.target.elements.quote.value;
+      const availability = e.target.elements.availability.value;
+
+      const { error } = await supabase.from('quotes').insert({
+        log_id: chatRoomId,
+        vendor_email: vendorEmail,
+        quote,
+        availability,
+        status: 'submitted'
+      });
+
+      if (!error) alert('Quote submitted!');
+    }}
+  >
+    <input type="number" name="quote" placeholder="Quote $" required />
+    <input type="datetime-local" name="availability" required />
+    <button type="submit">Submit</button>
+  </form>
+</div>
