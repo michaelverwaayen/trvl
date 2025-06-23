@@ -162,6 +162,46 @@ function isWithinRadius(lat1, lon1, lat2, lon2, radiusKm) {
   return (R * c) <= radiusKm;
 }
 
+const { v4: uuidv4 } = require('uuid');
+
+app.post('/dispatch_urgent_vendor', async (req, res) => {
+  const { chat_history } = req.body;
+  const chatRoomId = uuidv4();
+  const severity = 'high'; // Could be inferred with GPT if you want
+
+  const category = await guessCategoryFromHistory(chat_history); // Simplify as needed
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('email')
+    .eq('category', category)
+    .limit(1)
+    .maybeSingle();
+
+  if (!vendor || !vendor.email) {
+    return res.json({ success: false });
+  }
+
+  const { error } = await supabase.from('tickets').insert([{
+    assistant_reply: chat_history,
+    severity,
+    expires_at: new Date(Date.now() + 20 * 60 * 1000),
+    category,
+    dispatched_vendor_email: vendor.email,
+    chat_room_id: chatRoomId
+  }]);
+
+  if (error) return res.status(500).json({ success: false });
+
+  return res.json({ success: true, chat_room_id: chatRoomId });
+});
+
+async function guessCategoryFromHistory(text) {
+  // TODO: Add GPT logic or fallback regex
+  if (text.includes('leak')) return 'plumbing';
+  if (text.includes('fuse') || text.includes('wiring')) return 'electrical';
+  return 'general';
+}
 // Add new table fields to Supabase:
 // ALTER TABLE chat_logs ADD COLUMN user_location geography(Point, 4326);
 // ALTER TABLE chat_logs ADD COLUMN category text;
