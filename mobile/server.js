@@ -1,9 +1,9 @@
 // === BACKEND FILES ===
-
 // File: server.js
 const express = require('express');
 const cors = require('cors');
 const { OpenAI } = require('openai');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 const app = express();
@@ -11,6 +11,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 app.post('/chat', async (req, res) => {
   const { text, image } = req.body;
@@ -20,27 +21,25 @@ app.post('/chat', async (req, res) => {
   if (image) messages.push({ type: 'image_url', image_url: { url: image } });
 
   try {
-    const completion = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: 'gpt-4o',
+      stream: false,
       messages: [
         { role: 'user', content: messages }
       ]
     });
 
-    const replyText = completion.choices[0].message.content;
+    const replyText = response.choices[0].message.content;
 
-    // Simulate a quote coming back
-    const replies = [
-      { type: 'text', content: replyText },
-      { type: 'text', content: "I've sent your request to nearby vendors. You'll receive quotes shortly." },
-      { type: 'text', content: "Vendor A: $120 - Can come today." },
-      { type: 'text', content: "Vendor B: $100 - Available tomorrow morning." },
-    ];
+    // Store message in Supabase
+    await supabase.from('chat_logs').insert([
+      { user_input: text || '[image]', assistant_reply: replyText }
+    ]);
 
-    res.json({ replies });
+    res.json({ replies: [ { type: 'text', content: replyText } ] });
   } catch (err) {
     console.error('OpenAI Error:', err);
-    res.status(500).send('Error generating response');
+    res.status(500).json({ replies: [{ type: 'text', content: 'Sorry, I could not process that right now.' }] });
   }
 });
 
