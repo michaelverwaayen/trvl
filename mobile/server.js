@@ -209,7 +209,20 @@ app.post('/submit-rfq', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <head><title>RFQ Backend</title></head>
+      <body style="font-family: sans-serif; padding: 40px;">
+        <h1>🛠️ RFQ Backend is Running</h1>
+        <p>This is your backend API. Use the mobile app or test endpoints with Postman or curl.</p>
+        <ul>
+          <li><a href="/rfq-dashboard">📋 View RFQ Dashboard</a></li>
+        </ul>
+      </body>
+    </html>
+  `);
+});
 // === Start Server ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
