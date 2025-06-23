@@ -20,7 +20,7 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      const res = await axios.post('http://<YOUR_BACKEND_IP>:3000/chat', {
+      const res = await axios.post('http://localhost:3000/chat', {
         text: text || '',
         image: image || null,
       });
@@ -41,7 +41,7 @@ export default function ChatScreen() {
   const handleGetHelpNow = async () => {
     const fullTranscript = messages.map(m => m.content).join('\n');
     try {
-      const res = await axios.post('http://<YOUR_BACKEND_IP>:3000/dispatch_urgent_vendor', {
+      const res = await axios.post('http://localhost:3000/dispatch_urgent_vendor', {
         chat_history: fullTranscript
       });
 
