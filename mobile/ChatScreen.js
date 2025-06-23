@@ -1,18 +1,19 @@
-// File: ChatScreen.js
+// === ChatScreen.js ===
 import React, { useState } from 'react';
 import { View, TextInput, Button, FlatList, Text, Image, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 
-export default function ChatScreen() {
-  const [messages, setMessages] = useState([]);
+export default function ChatScreen({ messages: initialMessages = [], onUpdate, onManualSubmit }) {
+  const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
 
   const sendMessage = async (text = null, image = null) => {
     if (!text && !image) return;
     const userMessage = { role: 'user', type: image ? 'image' : 'text', content: text || image };
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
     setSending(true);
 
@@ -20,17 +21,36 @@ export default function ChatScreen() {
       const res = await axios.post('http://<YOUR_BACKEND_IP>:3000/chat', {
         text: text || '',
         image: image || null,
+      }, {
+        responseType: 'stream',
       });
-      const replies = res.data.replies;
-      setMessages(prev => [
-        ...prev,
-        userMessage,
-        ...replies.map(r => ({ role: 'assistant', type: r.type, content: r.content }))
-      ]);
+
+      const reader = res.data.getReader();
+      let assistantContent = '';
+
+      const decoder = new TextDecoder('utf-8');
+      let streamText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        streamText += decoder.decode(value);
+      }
+
+      assistantContent = streamText.replace(/^data: /gm, '').split('\n\n').filter(Boolean).join('');
+
+      const assistantMessage = { role: 'assistant', type: 'text', content: assistantContent };
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      if (onUpdate) {
+        onUpdate(finalMessages, finalMessages.map(m => m.content).join('\n'));
+      }
     } catch (err) {
       console.error('Error sending message:', err);
       setMessages(prev => [...prev, { role: 'assistant', type: 'text', content: 'Something went wrong. Please try again.' }]);
     }
+
     setSending(false);
   };
 
@@ -77,6 +97,9 @@ export default function ChatScreen() {
           <Text style={{ fontSize: 20 }}>📷</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.manualRow}>
+        <Button title="Submit RFQ Now" onPress={onManualSubmit} disabled={sending} />
+      </View>
       {sending && <ActivityIndicator style={{ marginTop: 10 }} size="small" color="#007AFF" />}
     </KeyboardAvoidingView>
   );
@@ -91,4 +114,5 @@ const styles = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginRight: 5 },
   image: { width: 150, height: 150, borderRadius: 8 },
   imageBtn: { marginLeft: 5, padding: 8 },
+  manualRow: { marginTop: 10 }
 });
