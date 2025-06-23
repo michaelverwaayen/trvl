@@ -32,7 +32,11 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
 
       const quoteMap = {};
       data?.forEach(q => {
-        quoteMap[q.log_id] = { quote: q.quote, availability: q.availability };
+        quoteMap[q.log_id] = {
+          quote: q.quote,
+          availability: q.availability,
+          status: q.status || 'submitted'
+        };
       });
       setSubmittedQuotes(quoteMap);
     };
@@ -43,10 +47,19 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
 
   const handleSubmitQuote = async (logId, quote, availability) => {
     const { error } = await supabase.from('quotes').insert([
-      { log_id: logId, quote, vendor_email: vendorEmail, availability }
+      {
+        log_id: logId,
+        quote,
+        vendor_email: vendorEmail,
+        availability,
+        status: 'submitted'
+      }
     ]);
     if (!error) {
-      setSubmittedQuotes(prev => ({ ...prev, [logId]: { quote, availability } }));
+      setSubmittedQuotes(prev => ({
+        ...prev,
+        [logId]: { quote, availability, status: 'submitted' }
+      }));
       alert('Quote submitted!');
     }
   };
@@ -66,6 +79,7 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
             <>
               <p><strong>Your Quote:</strong> ${submittedQuotes[ticket.id].quote}</p>
               <p><strong>Your Availability:</strong> {new Date(submittedQuotes[ticket.id].availability).toLocaleString()}</p>
+              <p><strong>Status:</strong> {submittedQuotes[ticket.id].status}</p>
             </>
           ) : (
             <form
