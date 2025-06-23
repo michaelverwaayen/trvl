@@ -1,13 +1,15 @@
-// === ChatScreen.js ===
 import React, { useState } from 'react';
 import { View, TextInput, Button, FlatList, Text, Image, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import ChatRoom from './ChatRoom';
 
-export default function ChatScreen({ messages: initialMessages = [], onUpdate, onManualSubmit }) {
-  const [messages, setMessages] = useState(initialMessages);
+export default function ChatScreen() {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [urgentChatId, setUrgentChatId] = useState(null);
+  const [inUrgentChat, setInUrgentChat] = useState(false);
 
   const sendMessage = async (text = null, image = null) => {
     if (!text && !image) return;
@@ -21,37 +23,38 @@ export default function ChatScreen({ messages: initialMessages = [], onUpdate, o
       const res = await axios.post('http://<YOUR_BACKEND_IP>:3000/chat', {
         text: text || '',
         image: image || null,
-      }, {
-        responseType: 'stream',
       });
-
-      const reader = res.data.getReader();
-      let assistantContent = '';
-
-      const decoder = new TextDecoder('utf-8');
-      let streamText = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        streamText += decoder.decode(value);
-      }
-
-      assistantContent = streamText.replace(/^data: /gm, '').split('\n\n').filter(Boolean).join('');
-
-      const assistantMessage = { role: 'assistant', type: 'text', content: assistantContent };
-      const finalMessages = [...updatedMessages, assistantMessage];
-      setMessages(finalMessages);
-
-      if (onUpdate) {
-        onUpdate(finalMessages, finalMessages.map(m => m.content).join('\n'));
-      }
+      const replies = res.data.replies;
+      setMessages(prev => [
+        ...prev,
+        userMessage,
+        ...replies.map(r => ({ role: 'assistant', type: r.type, content: r.content }))
+      ]);
     } catch (err) {
       console.error('Error sending message:', err);
       setMessages(prev => [...prev, { role: 'assistant', type: 'text', content: 'Something went wrong. Please try again.' }]);
     }
 
     setSending(false);
+  };
+
+  const handleGetHelpNow = async () => {
+    const fullTranscript = messages.map(m => m.content).join('\n');
+    try {
+      const res = await axios.post('http://<YOUR_BACKEND_IP>:3000/dispatch_urgent_vendor', {
+        chat_history: fullTranscript
+      });
+
+      if (res.data.success && res.data.chat_room_id) {
+        setUrgentChatId(res.data.chat_room_id);
+        setInUrgentChat(true);
+      } else {
+        alert('No vendor available right now. Continuing with RFQ.');
+      }
+    } catch (err) {
+      console.error('Urgent dispatch failed:', err);
+      alert('Something went wrong while dispatching.');
+    }
   };
 
   const pickImage = async () => {
@@ -71,6 +74,10 @@ export default function ChatScreen({ messages: initialMessages = [], onUpdate, o
       )}
     </View>
   );
+
+  if (inUrgentChat && urgentChatId) {
+    return <ChatRoom chatRoomId={urgentChatId} sender="user@example.com" />;
+  }
 
   return (
     <KeyboardAvoidingView
@@ -98,7 +105,7 @@ export default function ChatScreen({ messages: initialMessages = [], onUpdate, o
         </TouchableOpacity>
       </View>
       <View style={styles.manualRow}>
-        <Button title="Submit RFQ Now" onPress={onManualSubmit} disabled={sending} />
+        <Button title="🚨 Get Help Now" onPress={handleGetHelpNow} disabled={sending} />
       </View>
       {sending && <ActivityIndicator style={{ marginTop: 10 }} size="small" color="#007AFF" />}
     </KeyboardAvoidingView>
