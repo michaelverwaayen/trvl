@@ -3,6 +3,8 @@
 // File: App.js
 import React from 'react';
 import ChatScreen from './ChatScreen';
+import HomePage from './HomePage';
+import ChatFlowRouter from './ChatFlowRouter';
 
 export default function App() {
   return <ChatScreen />;
@@ -14,6 +16,17 @@ import { View, TextInput, Button, FlatList, Text, Image, StyleSheet, TouchableOp
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 
+
+
+export default function App() {
+  const [screen, setScreen] = useState('home');
+
+  return screen === 'home' ? (
+    <HomePage onStartNewRequest={() => setScreen('chat')} />
+  ) : (
+    <ChatFlowRouter onBackToHome={() => setScreen('home')} />
+  );
+}
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
