@@ -32,7 +32,7 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
 
       const quoteMap = {};
       data?.forEach(q => {
-        quoteMap[q.log_id] = q.quote;
+        quoteMap[q.log_id] = { quote: q.quote, availability: q.availability };
       });
       setSubmittedQuotes(quoteMap);
     };
@@ -46,7 +46,7 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
       { log_id: logId, quote, vendor_email: vendorEmail, availability }
     ]);
     if (!error) {
-      setSubmittedQuotes(prev => ({ ...prev, [logId]: quote }));
+      setSubmittedQuotes(prev => ({ ...prev, [logId]: { quote, availability } }));
       alert('Quote submitted!');
     }
   };
@@ -63,7 +63,10 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
           {ticket.image_url && <img src={ticket.image_url} alt="ticket" style={{ maxWidth: '100%' }} />}
 
           {submittedQuotes[ticket.id] ? (
-            <p><strong>Your Quote:</strong> ${submittedQuotes[ticket.id]}</p>
+            <>
+              <p><strong>Your Quote:</strong> ${submittedQuotes[ticket.id].quote}</p>
+              <p><strong>Your Availability:</strong> {new Date(submittedQuotes[ticket.id].availability).toLocaleString()}</p>
+            </>
           ) : (
             <form
               onSubmit={e => {
