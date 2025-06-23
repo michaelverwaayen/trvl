@@ -202,6 +202,41 @@ async function guessCategoryFromHistory(text) {
   if (text.includes('fuse') || text.includes('wiring')) return 'electrical';
   return 'general';
 }
+app.post('/submit-rfq', async (req, res) => {
+  const {
+    assistant_reply,
+    severity = 'medium',
+    category,
+    user_location,
+    image_url = null,
+    user_email = null
+  } = req.body;
+
+  const expires_at = new Date();
+  if (severity === 'high') expires_at.setMinutes(expires_at.getMinutes() + 20);
+  else if (severity === 'medium') expires_at.setHours(expires_at.getHours() + 24);
+  else expires_at.setHours(expires_at.getHours() + 48);
+
+  try {
+    const { error } = await supabase.from('tickets').insert([{
+      assistant_reply,
+      severity,
+      category,
+      user_location,
+      image_url,
+      user_email,
+      expires_at
+    }]);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('RFQ submission error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Add new table fields to Supabase:
 // ALTER TABLE chat_logs ADD COLUMN user_location geography(Point, 4326);
 // ALTER TABLE chat_logs ADD COLUMN category text;
