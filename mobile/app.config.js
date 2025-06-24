@@ -10,6 +10,10 @@ export default {
     platforms: ['ios', 'android', 'web'],
     orientation: 'portrait',
     backgroundColor: '#ffffff',
+    plugins: ['expo-notifications'],
+    android: {
+      useNextNotificationsApi: true
+    },
     updates: {
       fallbackToCacheTimeout: 0
     },
