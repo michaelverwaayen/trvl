@@ -15,6 +15,12 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
+  const statusColors = {
+    open: '#FFA500',
+    quoted: '#007AFF',
+    completed: '#28A745'
+  };
+
   useEffect(() => {
     const registerForPush = async () => {
       const { status: existing } = await Notifications.getPermissionsAsync();
@@ -68,11 +74,24 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const renderItem = ({ item }) => (
     <TouchableOpacity onPress={() => onSelectJob && onSelectJob(item.id)}>
       <View style={styles.jobCard}>
+        <View
+          style={[
+            styles.statusBadge,
+            { backgroundColor: statusColors[item.status] || '#999' }
+          ]}
+        >
+          <Text style={styles.badgeText}>{item.status || 'open'}</Text>
+        </View>
         <Text style={styles.summary}>
           Summary: {item.assistant_reply || 'No summary'}
         </Text>
         <Text>Category: {item.category || 'N/A'}</Text>
-        <Text>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown'}</Text>
+        <Text>
+          Created:{' '}
+          {item.created_at
+            ? new Date(item.created_at).toLocaleString()
+            : 'Unknown'}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -113,6 +132,14 @@ const getStyles = (theme) =>
       borderRadius: 6,
       backgroundColor: theme.card,
     },
+    statusBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+      marginBottom: 4,
+    },
+    badgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
     summary: { fontWeight: 'bold', marginBottom: 4 },
     error: { color: 'red', marginTop: 20 },
     empty: { marginTop: 20, fontStyle: 'italic', color: theme.text },

@@ -10,3 +10,15 @@ create table if not exists reviews (
     comment text,
     created_at timestamp with time zone default now()
 );
+
+-- Chat logs table stores user requests and assistant replies
+create table if not exists chat_logs (
+    id uuid primary key default gen_random_uuid(),
+    user_input text,
+    assistant_reply text,
+    image_url text,
+    user_location jsonb,
+    category text,
+    status text not null default 'open',
+    created_at timestamp with time zone default now()
+);

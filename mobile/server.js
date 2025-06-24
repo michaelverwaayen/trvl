@@ -83,7 +83,8 @@ app.get('/chat', async (req, res) => {
       assistant_reply: fullReply,
       image_url: image || null,
       user_location,
-      category
+      category,
+      status: 'open'
     }]);
 
     res.write("data: [DONE]\n\n");
@@ -145,7 +146,10 @@ app.get('/jobs-for-vendor/:vendorId', async (req, res) => {
       .select('*').eq('id', vendorId).single();
 
     const { lat: vLat, lon: vLon, radius_km, category } = vendor;
-    const { data: jobs } = await supabase.from('chat_logs').select('*');
+    const { data: jobs } = await supabase
+      .from('chat_logs')
+      .select('*')
+      .eq('status', 'open');
     const filtered = jobs.filter(job => {
       const loc = job.user_location?.coordinates;
       return loc && job.category === category &&
