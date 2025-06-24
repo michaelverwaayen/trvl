@@ -1,3 +1,6 @@
 {
-  "urlRandomness": "mxX0V3A"
+  "urlRandomness": "mxX0V3A",
+  "dev": true,
+  "minify": false,
+  "https": false
 }

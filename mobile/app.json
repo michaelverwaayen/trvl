@@ -3,8 +3,11 @@
     "name": "RFQ App",
     "slug": "rfq-app",
     "version": "1.0.0",
-    "platforms": ["ios", "android", "web"],
-    "sdkVersion": "49.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "orientation": "portrait",
     "backgroundColor": "#ffffff",
     "splash": {
@@ -15,9 +18,13 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": ["**/*"],
-    "web": {
-      
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "web": {},
+    "extra": {
+      "SUPABASE_URL": "https://yourproject.supabase.co",
+      "SUPABASE_ANON_KEY": "your-anon-key"
     }
   }
 }
