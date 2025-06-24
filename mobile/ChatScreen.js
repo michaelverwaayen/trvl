@@ -16,13 +16,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import ChatRoom from './ChatRoom';
-import { useTheme } from './ThemeContext';
-const query = new URLSearchParams({
-  text: text || '',
-  image: image || '',
-}).toString();
 
-const eventSource = new EventSourcePolyfill(`https://rfq-a1og.onrender.com/chat?${query}`);
+import { useTheme } from './ThemeContext';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -36,6 +31,24 @@ export default function ChatScreen() {
 const sendMessage = async (text = null, image = null) => {
   if (!text && !image) return;
 
+  // Construct query safely
+  let query = '';
+  try {
+    query = new URLSearchParams({
+      text: text || '',
+      image: image || '',
+    }).toString();
+  } catch (e) {
+    console.error('❌ Failed to build query string:', e);
+    return;
+  }
+
+  // Validate base64 image input (basic check)
+  if (image && !image.startsWith('data:image/')) {
+    console.warn('⚠️ Invalid image format submitted.');
+    return;
+  }
+
   const userMessage = {
     role: 'user',
     type: image ? 'image' : 'text',
@@ -46,26 +59,41 @@ const sendMessage = async (text = null, image = null) => {
   setSending(true);
 
   try {
-    const query = new URLSearchParams({
-      text: text || '',
-      image: image || '',
-    }).toString();
-
     const eventSource = new EventSourcePolyfill(
       `https://rfq-a1og.onrender.com/chat?${query}`
     );
 
     let fullResponse = '';
+    let done = false;
+
+    // Optional: Failsafe timeout
+    const timeoutId = setTimeout(() => {
+      if (!done) {
+        console.warn('⏰ SSE timed out. Closing connection.');
+        eventSource.close();
+        setSending(false);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            type: 'text',
+            content: 'Sorry, the server timed out.',
+          },
+        ]);
+      }
+    }, 30000); // 30 seconds
 
     eventSource.onmessage = (event) => {
+      if (done) return; // prevent handling after done
       if (event.data === '[DONE]') {
+        done = true;
+        clearTimeout(timeoutId);
         setSending(false);
         eventSource.close();
         return;
       }
 
       fullResponse += event.data;
-
       setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === 'assistant') {
@@ -77,31 +105,35 @@ const sendMessage = async (text = null, image = null) => {
     };
 
     eventSource.onerror = (e) => {
-      console.error('SSE Error:', e);
-      setSending(false);
-      eventSource.close();
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          type: 'text',
-          content: '⚠️ Something went wrong receiving a response.',
-        },
-      ]);
+      if (!done) {
+        console.error('🔥 SSE stream error:', e);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            type: 'text',
+            content: 'There was a connection issue. Please try again.',
+          },
+        ]);
+        clearTimeout(timeoutId);
+        setSending(false);
+        eventSource.close();
+      }
     };
   } catch (err) {
-    console.error('Error sending message:', err);
-    setSending(false);
+    console.error('❌ Error sending message:', err);
     setMessages(prev => [
       ...prev,
       {
         role: 'assistant',
         type: 'text',
-        content: '⚠️ Something went wrong. Please try again.',
+        content: 'Something went wrong. Please try again.',
       },
     ]);
+    setSending(false);
   }
 };
+
 
 
   const handleGetHelpNow = async () => {
