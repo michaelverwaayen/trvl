@@ -1,6 +1,7 @@
 // HomePage.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { OPENAI_API_KEY } from './config';
 import { supabase } from './supabase';
@@ -10,6 +11,31 @@ export default function HomePage({ onStartNewRequest, onSelectJob }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const registerForPush = async () => {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      let finalStatus = existing;
+      if (existing !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('Push permissions denied');
+        return;
+      }
+
+      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const token = tokenData.data;
+      await supabase.from('expo_tokens').upsert({ token });
+
+      Notifications.addNotificationReceivedListener(notification => {
+        console.log('🔔 Notification received', notification);
+      });
+    };
+
+    registerForPush();
+  }, []);
 
   useEffect(() => {
     const fetchJobs = async () => {

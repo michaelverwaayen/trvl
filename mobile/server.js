@@ -5,6 +5,7 @@ const cors = require('cors');
 const { OpenAI } = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
+const { Expo } = require('expo-server-sdk');
 require('dotenv').config();
 
 const app = express();
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const expo = new Expo();
 
 // === Helper: category inference ===
 async function guessCategoryFromHistory(text) {
@@ -240,6 +242,19 @@ app.post('/submit-rfq', async (req, res) => {
   }
 });
 
+// === /register-token ===
+app.post('/register-token', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Missing token' });
+  try {
+    await supabase.from('expo_tokens').upsert({ token });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Token registration failed:', err);
+    res.status(500).json({ success: false });
+  }
+});
+
 // === /health check ===
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
@@ -271,3 +286,26 @@ app.use((err, req, res, next) => {
 // === Start Server ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+// === Supabase realtime: push on new quote ===
+supabase
+  .channel('quotes-listener')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quotes' }, async payload => {
+    try {
+      const { data: tokens } = await supabase.from('expo_tokens').select('token');
+      const messages = (tokens || []).map(t => ({
+        to: t.token,
+        sound: 'default',
+        title: 'New Quote Received',
+        body: `A vendor responded with a quote.`,
+        data: { logId: payload.new.log_id }
+      }));
+
+      for (const chunk of expo.chunkPushNotifications(messages)) {
+        await expo.sendPushNotificationsAsync(chunk);
+      }
+    } catch (err) {
+      console.error('Push notification error:', err);
+    }
+  })
+  .subscribe();
