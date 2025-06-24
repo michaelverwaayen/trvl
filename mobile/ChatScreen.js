@@ -30,54 +30,76 @@ export default function ChatScreen() {
   const [urgentChatId, setUrgentChatId] = useState(null);
   const [inUrgentChat, setInUrgentChat] = useState(false);
 
-  const sendMessage = async (text = null, image = null) => {
-    if (!text && !image) return;
+const sendMessage = async (text = null, image = null) => {
+  if (!text && !image) return;
 
-    const userMessage = { role: 'user', type: image ? 'image' : 'text', content: text || image };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setSending(true);
+  const userMessage = {
+    role: 'user',
+    type: image ? 'image' : 'text',
+    content: text || image,
+  };
+  setMessages(prev => [...prev, userMessage]);
+  setInput('');
+  setSending(true);
 
-    try {
-      const eventSource = new EventSourcePolyfill('https://rfq-a1og.onrender.com/chat', {
-        headers: { 'Content-Type': 'application/json' },
-        method: 'POST',
-        body: JSON.stringify({ text, image }),
-      });
+  try {
+    const query = new URLSearchParams({
+      text: text || '',
+      image: image || '',
+    }).toString();
 
-      let fullResponse = '';
-      eventSource.onmessage = (event) => {
-        if (event.data === '[DONE]') {
-          setSending(false);
-          eventSource.close();
-        } else {
-          fullResponse += event.data;
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (last?.role === 'assistant') {
-              return [...prev.slice(0, -1), { ...last, content: fullResponse }];
-            } else {
-              return [...prev, { role: 'assistant', type: 'text', content: event.data }];
-            }
-          });
-        }
-      };
+    const eventSource = new EventSourcePolyfill(
+      `https://rfq-a1og.onrender.com/chat?${query}`
+    );
 
-      eventSource.onerror = (e) => {
-        console.error('SSE Error:', e);
+    let fullResponse = '';
+
+    eventSource.onmessage = (event) => {
+      if (event.data === '[DONE]') {
         setSending(false);
         eventSource.close();
-      };
-    } catch (err) {
-      console.error('Error sending message:', err);
-      setMessages(prev => [...prev, {
+        return;
+      }
+
+      fullResponse += event.data;
+
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant') {
+          return [...prev.slice(0, -1), { ...last, content: fullResponse }];
+        } else {
+          return [...prev, { role: 'assistant', type: 'text', content: event.data }];
+        }
+      });
+    };
+
+    eventSource.onerror = (e) => {
+      console.error('SSE Error:', e);
+      setSending(false);
+      eventSource.close();
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          type: 'text',
+          content: '⚠️ Something went wrong receiving a response.',
+        },
+      ]);
+    };
+  } catch (err) {
+    console.error('Error sending message:', err);
+    setSending(false);
+    setMessages(prev => [
+      ...prev,
+      {
         role: 'assistant',
         type: 'text',
-        content: 'Something went wrong. Please try again.'
-      }]);
-      setSending(false);
-    }
-  };
+        content: '⚠️ Something went wrong. Please try again.',
+      },
+    ]);
+  }
+};
+
 
   const handleGetHelpNow = async () => {
     const fullTranscript = messages.map(m => m.content).join('\n');
