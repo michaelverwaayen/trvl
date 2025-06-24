@@ -27,3 +27,9 @@ trvl-working/
 
 # macOS files
 .DS_Store
+
+node_modules/
+.cache/
+*.pack
+
+
