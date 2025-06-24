@@ -1,16 +1,19 @@
 // HomePage.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useTheme } from './ThemeContext';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { OPENAI_API_KEY } from './config';
 import { supabase } from './supabase';
 
 
-export default function HomePage({ onStartNewRequest, onSelectJob }) {
+export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSettings }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   useEffect(() => {
     const registerForPush = async () => {
@@ -75,12 +78,13 @@ export default function HomePage({ onStartNewRequest, onSelectJob }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Text style={styles.header}>🧾 Your Requests</Text>
       <Button title="➕ Start New Request" onPress={onStartNewRequest} />
+      <Button title="⚙️ Settings" onPress={onOpenSettings} />
       
       {loading ? (
-        <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
       ) : error ? (
         <Text style={styles.error}>Error: {error}</Text>
       ) : jobs.length === 0 ? (
@@ -97,18 +101,19 @@ export default function HomePage({ onStartNewRequest, onSelectJob }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
-  jobCard: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#F9F9F9'
-  },
-  summary: { fontWeight: 'bold', marginBottom: 4 },
-  error: { color: 'red', marginTop: 20 },
-  empty: { marginTop: 20, fontStyle: 'italic', color: '#666' }
-});
+const getStyles = (theme) =>
+  StyleSheet.create({
+    container: { flex: 1, padding: 20 },
+    header: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, color: theme.text },
+    jobCard: {
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginVertical: 6,
+      borderRadius: 6,
+      backgroundColor: theme.card,
+    },
+    summary: { fontWeight: 'bold', marginBottom: 4 },
+    error: { color: 'red', marginTop: 20 },
+    empty: { marginTop: 20, fontStyle: 'italic', color: theme.text },
+  });

@@ -4,11 +4,15 @@ import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
 import HomePage from './HomePage';
 import ChatFlowRouter from './ChatFlowRouter';
 import QuoteComparison from './QuoteComparison';
+import SettingsScreen from './SettingsScreen';
 import { SUPABASE_URL } from './config';
+import { ThemeProvider, useTheme } from './ThemeContext';
 console.log('🧪 SUPABASE_URL:', SUPABASE_URL);
-export default function App() {
+
+function Main() {
   const [screen, setScreen] = useState('home');
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const { theme } = useTheme();
 
   // Simple fallback if a screen fails to render
   const renderScreen = () => {
@@ -21,10 +25,13 @@ export default function App() {
               setSelectedJobId(id);
               setScreen('quotes');
             }}
+            onOpenSettings={() => setScreen('settings')}
           />
         );
       } else if (screen === 'chat') {
         return <ChatFlowRouter onBackToHome={() => setScreen('home')} />;
+      } else if (screen === 'settings') {
+        return <SettingsScreen onBack={() => setScreen('home')} />;
       } else {
         return (
           <QuoteComparison
@@ -44,7 +51,7 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {renderScreen()}
     </SafeAreaView>
   );
@@ -53,7 +60,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
     paddingTop: 40
   },
   centered: {
@@ -62,3 +68,12 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   }
 });
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <Main />
+    </ThemeProvider>
+  );
+}
+
