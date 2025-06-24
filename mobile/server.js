@@ -6,6 +6,7 @@ const { OpenAI } = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
 const { Expo } = require('expo-server-sdk');
+const multimodalContent = buildMultimodalContent(text, image);
 require('dotenv').config();
 
 const app = express();
@@ -29,7 +30,6 @@ async function guessCategoryFromHistory(text) {
   return 'general';
 }
 
-
 // === /chat – GET-compatible SSE + save to chat_logs ===
 app.get('/chat', async (req, res) => {
   const text = req.query.text || '';
@@ -37,17 +37,9 @@ app.get('/chat', async (req, res) => {
   const user_location = req.query.user_location || '';
   const category = req.query.category || '';
 
-  // Correct multimodal structure
-  const messages = [];
-  if (text) {
-    messages.push({ type: 'text', text: text }); // ✅ FIXED
-  }
-  if (image) {
-    messages.push({ type: 'image_url', image_url: { url: image } });
-  }
 
-  // No input = early return
-  if (messages.length === 0) {
+
+  if (multimodalContent.length === 0) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.write("data: No message provided.\n\n");
     res.write("data: [DONE]\n\n");
@@ -66,7 +58,7 @@ app.get('/chat', async (req, res) => {
       messages: [
         {
           role: 'user',
-          content: messages
+          content: multimodalContent // ✅ always an array
         }
       ]
     });
@@ -90,11 +82,55 @@ app.get('/chat', async (req, res) => {
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (err) {
-    console.error('🔥 Streaming error:', err);
+    console.error('🔥 Streaming error:', err.response?.data || err.message || err);
     res.write("data: Sorry, something went wrong.\n\n");
     res.write("data: [DONE]\n\n");
+    console.log('🧠 Messages sent to OpenAI:', JSON.stringify(multimodalContent, null, 2));
     res.end();
   }
+});
+
+  try {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+const stream = await openai.chat.completions.create({
+  model: 'gpt-4o',
+  stream: true,
+  messages: [
+    {
+      role: 'user',
+      content: messages.length === 1 ? messages[0] : messages
+    }
+  ]
+});
+    let fullReply = '';
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content || '';
+      fullReply += content;
+      res.write(`data: ${content}\n\n`);
+    }
+
+    await supabase.from('chat_logs').insert([{
+      user_input: text || '[image]',
+      assistant_reply: fullReply,
+      image_url: image || null,
+      user_location,
+      category,
+      status: 'open'
+    }]);
+
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } catch (err) {
+  console.error('🔥 Streaming error:', err.response?.data || err.message || err);
+  res.write("data: Sorry, something went wrong.\n\n");
+  res.write("data: [DONE]\n\n");
+  console.log('🧠 Messages sent to OpenAI:', JSON.stringify(messages, null, 2));
+  res.end();
+}
+
 });
 
 
