@@ -2,12 +2,11 @@
 // A Supabase-connected vendor dashboard with quotes, metrics, and urgent dispatch
 
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
+import { OPENAI_API_KEY } from './config';
+import { supabase } from './supabase';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+
 
 export default function VendorDashboard({ vendorLocation, radius, category, vendorEmail }) {
   const [tickets, setTickets] = useState([]);

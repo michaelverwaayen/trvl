@@ -27,12 +27,31 @@ async function guessCategoryFromHistory(text) {
   return 'general';
 }
 
-// === /chat – streaming GPT + save to chat_logs ===
-app.post('/chat', async (req, res) => {
-  const { text, image, user_location, category } = req.body;
+
+// === /chat – GET-compatible SSE + save to chat_logs ===
+app.get('/chat', async (req, res) => {
+  const text = req.query.text || '';
+  const image = req.query.image || '';
+  const user_location = req.query.user_location || '';
+  const category = req.query.category || '';
+
+  // Correct multimodal structure
   const messages = [];
-  if (text) messages.push({ type: 'text', text });
-  if (image) messages.push({ type: 'image_url', image_url: { url: image } });
+  if (text) {
+    messages.push({ type: 'text', text: text }); // ✅ FIXED
+  }
+  if (image) {
+    messages.push({ type: 'image_url', image_url: { url: image } });
+  }
+
+  // No input = early return
+  if (messages.length === 0) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.write("data: No message provided.\n\n");
+    res.write("data: [DONE]\n\n");
+    res.end();
+    return;
+  }
 
   try {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -42,7 +61,12 @@ app.post('/chat', async (req, res) => {
     const stream = await openai.chat.completions.create({
       model: 'gpt-4o',
       stream: true,
-      messages: [{ role: 'user', content: messages }]
+      messages: [
+        {
+          role: 'user',
+          content: messages
+        }
+      ]
     });
 
     let fullReply = '';
@@ -56,18 +80,20 @@ app.post('/chat', async (req, res) => {
       user_input: text || '[image]',
       assistant_reply: fullReply,
       image_url: image || null,
-      user_location: user_location || null,
-      category: category || null
+      user_location,
+      category
     }]);
 
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (err) {
-    console.error('Streaming error:', err);
+    console.error('🔥 Streaming error:', err);
     res.write("data: Sorry, something went wrong.\n\n");
+    res.write("data: [DONE]\n\n");
     res.end();
   }
 });
+
 
 // === /estimate/:summary ===
 app.get('/estimate/:summary', async (req, res) => {

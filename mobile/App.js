@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
 import HomePage from './HomePage';
 import ChatFlowRouter from './ChatFlowRouter';
-
+import { SUPABASE_URL } from './config';
+console.log('🧪 SUPABASE_URL:', SUPABASE_URL);
 export default function App() {
   const [screen, setScreen] = useState('home');
 

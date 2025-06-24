@@ -1,11 +1,11 @@
 // === ChatRoom.js ===
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { createClient } from '@supabase/supabase-js';
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import Constants from 'expo-constants';
+import { supabase } from './supabase'; // or '../supabase'
+import { OPENAI_API_KEY } from './config';
+
+
+
 
 export default function ChatRoom({ chatRoomId, sender }) {
   const [messages, setMessages] = useState([]);

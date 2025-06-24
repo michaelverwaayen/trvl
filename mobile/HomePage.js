@@ -1,12 +1,10 @@
 // HomePage.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import { createClient } from '@supabase/supabase-js';
-import { createClient } from '@supabase/supabase-js';
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import Constants from 'expo-constants';
+import { OPENAI_API_KEY } from './config';
+import { supabase } from './supabase';
+
 
 export default function HomePage({ onStartNewRequest }) {
   const [jobs, setJobs] = useState([]);

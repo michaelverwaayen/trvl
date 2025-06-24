@@ -1,3 +1,4 @@
+import { EventSourcePolyfill } from 'event-source-polyfill';
 import React, { useState } from 'react';
 import {
   View,
@@ -15,6 +16,12 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import ChatRoom from './ChatRoom';
+const query = new URLSearchParams({
+  text: text || '',
+  image: image || '',
+}).toString();
+
+const eventSource = new EventSourcePolyfill(`https://rfq-a1og.onrender.com/chat?${query}`);
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -27,22 +34,40 @@ export default function ChatScreen() {
     if (!text && !image) return;
 
     const userMessage = { role: 'user', type: image ? 'image' : 'text', content: text || image };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setSending(true);
 
     try {
-      const res = await axios.post('https://rfq-a1og.onrender.com/chat', {
-        text: text || '',
-        image: image || null,
+      const eventSource = new EventSourcePolyfill('https://rfq-a1og.onrender.com/chat', {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        body: JSON.stringify({ text, image }),
       });
-      const replies = res.data.replies;
-      setMessages(prev => [
-        ...prev,
-        userMessage,
-        ...replies.map(r => ({ role: 'assistant', type: r.type, content: r.content }))
-      ]);
+
+      let fullResponse = '';
+      eventSource.onmessage = (event) => {
+        if (event.data === '[DONE]') {
+          setSending(false);
+          eventSource.close();
+        } else {
+          fullResponse += event.data;
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return [...prev.slice(0, -1), { ...last, content: fullResponse }];
+            } else {
+              return [...prev, { role: 'assistant', type: 'text', content: event.data }];
+            }
+          });
+        }
+      };
+
+      eventSource.onerror = (e) => {
+        console.error('SSE Error:', e);
+        setSending(false);
+        eventSource.close();
+      };
     } catch (err) {
       console.error('Error sending message:', err);
       setMessages(prev => [...prev, {
@@ -50,9 +75,8 @@ export default function ChatScreen() {
         type: 'text',
         content: 'Something went wrong. Please try again.'
       }]);
+      setSending(false);
     }
-
-    setSending(false);
   };
 
   const handleGetHelpNow = async () => {
@@ -147,3 +171,4 @@ const styles = StyleSheet.create({
   imageBtn: { marginLeft: 5, padding: 8 },
   manualRow: { marginTop: 10 }
 });
+
