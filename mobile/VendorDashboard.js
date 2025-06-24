@@ -13,6 +13,7 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
   const [submittedQuotes, setSubmittedQuotes] = useState({});
   const [acceptedTicketId, setAcceptedTicketId] = useState(null);
   const [urgentTicket, setUrgentTicket] = useState(null);
+  const [rating, setRating] = useState(null);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -44,6 +45,19 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
 
     fetchTickets();
     fetchQuotes();
+    const fetchRating = async () => {
+      const { data } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('vendor_id', vendorEmail);
+      if (data && data.length > 0) {
+        const avg = data.reduce((s, r) => s + r.rating, 0) / data.length;
+        setRating(avg.toFixed(1));
+      } else {
+        setRating(null);
+      }
+    };
+    fetchRating();
   }, [vendorLocation, radius, category, vendorEmail]);
 
   const handleSubmitQuote = async (logId, quote, availability) => {
@@ -77,6 +91,7 @@ export default function VendorDashboard({ vendorLocation, radius, category, vend
   return (
     <div style={{ padding: 20 }}>
       <h2>Jobs in your area ({category})</h2>
+      <p><strong>Your Rating:</strong> {rating ? `${rating}/5` : 'No reviews yet'}</p>
 
       {urgentTicket && (
         <div style={{ border: '2px solid red', padding: 10, marginBottom: 20 }}>
