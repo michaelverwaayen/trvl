@@ -1,9 +1,29 @@
+# Environment files
 .env
 .env.local
 *.env.*
+
+# Node modules and build output
 node_modules/
 dist/
+
+# BFG reports
 *.bfg-report/
+*.bfg-report/**
+
+# Git packfiles and internal repos
 *.pack
 *.idx
-trvl.git
+
+# Embedded Git repos (accidental or subrepo)
+trvl.git/
+trvl-clean.git/
+trvl-bfg-clean.git/
+trvl-working/
+**/trvl.git/
+**/trvl-clean.git/
+**/trvl-bfg-clean.git/
+**/trvl-working/
+
+# macOS files
+.DS_Store
