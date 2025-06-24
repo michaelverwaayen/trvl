@@ -1,6 +1,4 @@
 // === ChatRoom.js ===
-// A shared real-time chat room for user and vendor via Supabase
-
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -40,6 +38,26 @@ export default function ChatRoom({ chatRoomId, sender }) {
     };
   }, [chatRoomId]);
 
+  useEffect(() => {
+    const fetchQuoteStatus = async () => {
+      const { data } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('log_id', chatRoomId)
+        .eq('status', 'accepted')
+        .maybeSingle();
+
+      if (data) {
+        setMessages(prev => [
+          ...prev,
+          { id: 'system-accepted', sender: 'system', message: '✅ Your job has been accepted!' }
+        ]);
+      }
+    };
+
+    fetchQuoteStatus();
+  }, [chatRoomId]);
+
   const sendMessage = async () => {
     if (!input.trim()) return;
     await supabase.from('chat_messages').insert({
@@ -55,7 +73,7 @@ export default function ChatRoom({ chatRoomId, sender }) {
       <h2>Live Chat</h2>
       <div style={{ maxHeight: 300, overflowY: 'scroll', border: '1px solid #ccc', padding: 10 }}>
         {messages.map(msg => (
-          <div key={msg.id} style={{ margin: '10px 0' }}>
+          <div key={msg.id || Math.random()} style={{ margin: '10px 0' }}>
             <strong>{msg.sender}:</strong> {msg.message}
           </div>
         ))}
@@ -70,23 +88,3 @@ export default function ChatRoom({ chatRoomId, sender }) {
     </div>
   );
 }
-useEffect(() => {
-  const fetchQuoteStatus = async () => {
-    const { data } = await supabase
-      .from('quotes')
-      .select('*')
-      .eq('log_id', chatRoomId)
-      .eq('status', 'accepted')
-      .maybeSingle();
-
-    if (data) {
-      setMessages(prev => [
-        ...prev,
-        { id: 'system-accepted', sender: 'system', message: '✅ Your job has been accepted!' }
-      ]);
-    }
-  };
-
-  fetchQuoteStatus();
-}, [chatRoomId]);
-

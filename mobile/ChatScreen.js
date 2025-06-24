@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, FlatList, Text, Image, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  TextInput,
+  Button,
+  FlatList,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import ChatRoom from './ChatRoom';
@@ -13,6 +25,7 @@ export default function ChatScreen() {
 
   const sendMessage = async (text = null, image = null) => {
     if (!text && !image) return;
+
     const userMessage = { role: 'user', type: image ? 'image' : 'text', content: text || image };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -32,7 +45,11 @@ export default function ChatScreen() {
       ]);
     } catch (err) {
       console.error('Error sending message:', err);
-      setMessages(prev => [...prev, { role: 'assistant', type: 'text', content: 'Something went wrong. Please try again.' }]);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'text',
+        content: 'Something went wrong. Please try again.'
+      }]);
     }
 
     setSending(false);
@@ -41,11 +58,12 @@ export default function ChatScreen() {
   const handleGetHelpNow = async () => {
     const fullTranscript = messages.map(m => m.content).join('\n');
     try {
-      const res = await axios.post('https://rfq-a1og.onrender.com/chat'/dispatch_urgent_vendor', {
+      const res = await axios.post('https://rfq-a1og.onrender.com/dispatch_urgent_vendor', {
         chat_history: fullTranscript
       });
 
       if (res.data.success && res.data.chat_room_id) {
+        console.log('🚀 Urgent chat initiated:', res.data.chat_room_id);
         setUrgentChatId(res.data.chat_room_id);
         setInUrgentChat(true);
       } else {
@@ -65,17 +83,23 @@ export default function ChatScreen() {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={[styles.message, item.role === 'user' ? styles.user : styles.assistant]}>
-      {item.type === 'image' ? (
+  const renderItem = ({ item, index }) => (
+    <View
+      key={item.id || index}
+      style={[styles.message, item.role === 'user' ? styles.user : styles.assistant]}
+    >
+      {item.type === 'image' && item.content ? (
         <Image source={{ uri: item.content }} style={styles.image} />
       ) : (
-        <Text>{item.content}</Text>
+        <Text>{item.content || '⚠️ Empty message'}</Text>
       )}
     </View>
   );
 
+  console.log('Rendering ChatScreen', { messages, sending, inUrgentChat, urgentChatId });
+
   if (inUrgentChat && urgentChatId) {
+    console.log('🎯 Entering urgent chat');
     return <ChatRoom chatRoomId={urgentChatId} sender="user@example.com" />;
   }
 
@@ -88,7 +112,7 @@ export default function ChatScreen() {
       <FlatList
         data={messages}
         renderItem={renderItem}
-        keyExtractor={(_, idx) => idx.toString()}
+        keyExtractor={(item, idx) => item.id?.toString() || idx.toString()}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
       <View style={styles.inputRow}>
