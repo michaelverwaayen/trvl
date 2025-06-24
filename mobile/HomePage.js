@@ -1,6 +1,16 @@
 // HomePage.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  Button,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  TextInput,
+  ScrollView
+} from 'react-native';
 import { useTheme } from './ThemeContext';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -12,6 +22,8 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
@@ -71,6 +83,13 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
     fetchJobs();
   }, []);
 
+  const categories = ['All', ...Array.from(new Set(jobs.map(j => j.category).filter(Boolean)))];
+  const filteredJobs = jobs.filter(j => {
+    const matchesSearch = j.assistant_reply?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || j.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   const renderItem = ({ item }) => (
     <TouchableOpacity onPress={() => onSelectJob && onSelectJob(item.id)}>
       <View style={styles.jobCard}>
@@ -102,6 +121,31 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
       <Button title="➕ Start New Request" onPress={onStartNewRequest} />
       <Button title="⚙️ Settings" onPress={onOpenSettings} />
       
+      <TextInput
+        placeholder="Search requests..."
+        value={search}
+        onChangeText={setSearch}
+        style={styles.searchInput}
+        placeholderTextColor={theme.text}
+      />
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+        {categories.map(cat => (
+          <TouchableOpacity
+            key={cat}
+            onPress={() => setSelectedCategory(cat)}
+            style={[
+              styles.chip,
+              selectedCategory === cat && styles.selectedChip
+            ]}
+          >
+            <Text style={{ color: selectedCategory === cat ? '#fff' : theme.text }}>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       {loading ? (
         <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
       ) : error ? (
@@ -110,7 +154,7 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
         <Text style={styles.empty}>No requests found. Start one above!</Text>
       ) : (
         <FlatList
-          data={jobs}
+          data={filteredJobs}
           keyExtractor={(item, index) => item.id?.toString() || index.toString()}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -143,4 +187,25 @@ const getStyles = (theme) =>
     summary: { fontWeight: 'bold', marginBottom: 4 },
     error: { color: 'red', marginTop: 20 },
     empty: { marginTop: 20, fontStyle: 'italic', color: theme.text },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 6,
+      padding: 8,
+      marginTop: 10,
+      color: theme.text
+    },
+    chip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginRight: 8,
+      backgroundColor: theme.card
+    },
+    selectedChip: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary
+    }
   });
