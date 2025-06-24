@@ -6,7 +6,7 @@ const { OpenAI } = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
 const { Expo } = require('expo-server-sdk');
-const multimodalContent = buildMultimodalContent(text, image);
+
 require('dotenv').config();
 
 const app = express();
@@ -29,6 +29,14 @@ async function guessCategoryFromHistory(text) {
   if (text.toLowerCase().includes('electrical') || text.includes('breaker')) return 'electrical';
   return 'general';
 }
+// === Helper: build multimodal message ===
+function buildMultimodalContent(text, image) {
+  const content = [];
+  if (text) content.push({ type: 'text', text });
+  if (image) content.push({ type: 'image_url', image_url: { url: image } });
+  return content;
+}
+
 
 // === /chat – GET-compatible SSE + save to chat_logs ===
 app.get('/chat', async (req, res) => {
@@ -36,6 +44,7 @@ app.get('/chat', async (req, res) => {
   const image = req.query.image || '';
   const user_location = req.query.user_location || '';
   const category = req.query.category || '';
+  const multimodalContent = buildMultimodalContent(text, image);
 
 
 
@@ -89,50 +98,6 @@ app.get('/chat', async (req, res) => {
     res.end();
   }
 });
-
-  try {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-const stream = await openai.chat.completions.create({
-  model: 'gpt-4o',
-  stream: true,
-  messages: [
-    {
-      role: 'user',
-      content: messages.length === 1 ? messages[0] : messages
-    }
-  ]
-});
-    let fullReply = '';
-    for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content || '';
-      fullReply += content;
-      res.write(`data: ${content}\n\n`);
-    }
-
-    await supabase.from('chat_logs').insert([{
-      user_input: text || '[image]',
-      assistant_reply: fullReply,
-      image_url: image || null,
-      user_location,
-      category,
-      status: 'open'
-    }]);
-
-    res.write("data: [DONE]\n\n");
-    res.end();
-  } catch (err) {
-  console.error('🔥 Streaming error:', err.response?.data || err.message || err);
-  res.write("data: Sorry, something went wrong.\n\n");
-  res.write("data: [DONE]\n\n");
-  console.log('🧠 Messages sent to OpenAI:', JSON.stringify(messages, null, 2));
-  res.end();
-}
-
-});
-
 
 // === /estimate/:summary ===
 app.get('/estimate/:summary', async (req, res) => {
