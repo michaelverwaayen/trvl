@@ -1,0 +1,9 @@
+.env
+.env.local
+*.env.*
+node_modules/
+dist/
+*.bfg-report/
+*.pack
+*.idx
+trvl.git
