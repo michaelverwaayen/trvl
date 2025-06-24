@@ -8,3 +8,46 @@ dist/
 *.idx
 trvl.git
 trvl.git/
+# BFG and cleanup clones
+trvl-bfg-clean.git/
+trvl-clean.git/
+trvl-bfg-fix.git/
+trvl-verify-clean/
+trvl-working/
+mobile/
+*.bfg-report
+
+# macOS files
+.DS_Store
+
+# Logs and junk
+*.log
+*.bak
+# Node + JS
+node_modules/
+*.log
+*.bak
+.env
+.env.*
+
+# Cleanup clones and working directories
+trvl.git/
+trvl.git.bfg-report/
+trvl-bfg-clean.git/
+trvl-bfg-clean.git.bfg-report/
+trvl-clean.git/
+trvl-verify-clean/
+trvl-working/
+
+# Subfolders
+mobile/node_modules/
+mobile/trvl.git/
+mobile/trvl.git.bfg-report/
+
+# OS clutter
+.DS_Store
+Thumbs.db
+
+# VSCode/IDE junk
+.vscode/
+.idea/
