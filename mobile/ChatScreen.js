@@ -16,6 +16,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import ChatRoom from './ChatRoom';
+import { useTheme } from './ThemeContext';
 const query = new URLSearchParams({
   text: text || '',
   image: image || '',
@@ -29,6 +30,8 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [urgentChatId, setUrgentChatId] = useState(null);
   const [inUrgentChat, setInUrgentChat] = useState(false);
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
 const sendMessage = async (text = null, image = null) => {
   if (!text && !image) return;
@@ -177,20 +180,21 @@ const sendMessage = async (text = null, image = null) => {
       <View style={styles.manualRow}>
         <Button title="🚨 Get Help Now" onPress={handleGetHelpNow} disabled={sending} />
       </View>
-      {sending && <ActivityIndicator style={{ marginTop: 10 }} size="small" color="#007AFF" />}
+      {sending && <ActivityIndicator style={{ marginTop: 10 }} size="small" color={theme.primary} />}
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, paddingTop: 50 },
-  message: { padding: 10, marginVertical: 5, borderRadius: 8, maxWidth: '80%' },
-  user: { alignSelf: 'flex-end', backgroundColor: '#DCF8C6' },
-  assistant: { alignSelf: 'flex-start', backgroundColor: '#EEE' },
-  inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginRight: 5 },
-  image: { width: 150, height: 150, borderRadius: 8 },
-  imageBtn: { marginLeft: 5, padding: 8 },
-  manualRow: { marginTop: 10 }
-});
+const getStyles = (theme) =>
+  StyleSheet.create({
+    container: { flex: 1, padding: 10, paddingTop: 50, backgroundColor: theme.background },
+    message: { padding: 10, marginVertical: 5, borderRadius: 8, maxWidth: '80%' },
+    user: { alignSelf: 'flex-end', backgroundColor: theme.card },
+    assistant: { alignSelf: 'flex-start', backgroundColor: theme.card },
+    inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+    input: { flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 5, padding: 10, marginRight: 5, color: theme.text },
+    image: { width: 150, height: 150, borderRadius: 8 },
+    imageBtn: { marginLeft: 5, padding: 8 },
+    manualRow: { marginTop: 10 },
+  });
 
