@@ -1,12 +1,12 @@
 // HomePage.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import Constants from 'expo-constants';
 import { OPENAI_API_KEY } from './config';
 import { supabase } from './supabase';
 
 
-export default function HomePage({ onStartNewRequest }) {
+export default function HomePage({ onStartNewRequest, onSelectJob }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,13 +37,15 @@ export default function HomePage({ onStartNewRequest }) {
   }, []);
 
   const renderItem = ({ item }) => (
-    <View style={styles.jobCard}>
-      <Text style={styles.summary}>
-        Summary: {item.assistant_reply || 'No summary'}
-      </Text>
-      <Text>Category: {item.category || 'N/A'}</Text>
-      <Text>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown'}</Text>
-    </View>
+    <TouchableOpacity onPress={() => onSelectJob && onSelectJob(item.id)}>
+      <View style={styles.jobCard}>
+        <Text style={styles.summary}>
+          Summary: {item.assistant_reply || 'No summary'}
+        </Text>
+        <Text>Category: {item.category || 'N/A'}</Text>
+        <Text>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown'}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
