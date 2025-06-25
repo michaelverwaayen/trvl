@@ -67,6 +67,7 @@ export default function ChatScreen() {
       role: 'user',
       type: image ? 'image' : 'text',
       content: text || image,
+      timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -91,11 +92,13 @@ export default function ChatScreen() {
               role: 'assistant',
               type: 'text',
               content: 'Sorry, the server timed out.',
+              timestamp: new Date().toISOString(),
             },
           ]);
         }
       }, 30000);
 
+      let firstAssistantChunk = true;
       eventSource.onmessage = (event) => {
         if (done) return;
         if (event.data === '[DONE]') {
@@ -109,11 +112,19 @@ export default function ChatScreen() {
         fullResponse += event.data;
         setMessages(prev => {
           const last = prev[prev.length - 1];
-          if (last?.role === 'assistant') {
+          if (!firstAssistantChunk && last?.role === 'assistant') {
             return [...prev.slice(0, -1), { ...last, content: fullResponse }];
-          } else {
-            return [...prev, { role: 'assistant', type: 'text', content: event.data }];
           }
+          firstAssistantChunk = false;
+          return [
+            ...prev,
+            {
+              role: 'assistant',
+              type: 'text',
+              content: event.data,
+              timestamp: new Date().toISOString(),
+            },
+          ];
         });
       };
 
@@ -126,6 +137,7 @@ export default function ChatScreen() {
               role: 'assistant',
               type: 'text',
               content: 'There was a connection issue. Please try again.',
+              timestamp: new Date().toISOString(),
             },
           ]);
           clearTimeout(timeoutId);
@@ -141,6 +153,7 @@ export default function ChatScreen() {
           role: 'assistant',
           type: 'text',
           content: 'Something went wrong. Please try again.',
+          timestamp: new Date().toISOString(),
         },
       ]);
       setSending(false);
@@ -196,6 +209,11 @@ export default function ChatScreen() {
       ) : (
         <Text style={item.role === 'user' ? styles.userText : styles.assistantText}>
           {item.content || '⚠️ Empty message'}
+        </Text>
+      )}
+      {item.timestamp && (
+        <Text style={styles.timestamp}>
+          {new Date(item.timestamp).toLocaleTimeString()}
         </Text>
       )}
     </View>
@@ -255,13 +273,14 @@ const getStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, padding: 10, paddingTop: 50, backgroundColor: theme.background },
     message: { padding: 10, marginVertical: 5, borderRadius: 8, maxWidth: '80%' },
-    user: { alignSelf: 'flex-end', backgroundColor: theme.card },
+    user: { alignSelf: 'flex-end', backgroundColor: theme.primary },
     assistant: { alignSelf: 'flex-start', backgroundColor: theme.card },
     inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
     input: { flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 5, padding: 10, marginRight: 5, color: theme.text },
     image: { width: 150, height: 150, borderRadius: 8 },
     imageBtn: { marginLeft: 5, padding: 8 },
     manualRow: { marginTop: 10 },
-    userText: { color: '#FFFFFF' },
-    assistantText: { color: '#FFA500' }
+    userText: { color: '#FFFFFF', textAlign: 'right' },
+    assistantText: { color: '#FFA500', textAlign: 'left' },
+    timestamp: { fontSize: 10, color: theme.text, marginTop: 4, textAlign: 'right' },
   });
