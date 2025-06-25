@@ -11,6 +11,7 @@ import {
   TextInput,
   ScrollView
 } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from './ThemeContext';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -158,9 +159,12 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={styles.header}>🧾 Your Requests</Text>
-      <Button title="➕ Start New Request" onPress={onStartNewRequest} />
-      <Button title="⚙️ Settings" onPress={onOpenSettings} />
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>🧾 Your Requests</Text>
+        <TouchableOpacity onPress={onOpenSettings} style={styles.settingsButton}>
+          <Ionicons name="settings-outline" size={24} color={theme.text} />
+        </TouchableOpacity>
+      </View>
       
       <TextInput
         placeholder="Search requests..."
@@ -229,6 +233,9 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
           ))}
         </>
       )}
+      <TouchableOpacity style={styles.fab} onPress={onStartNewRequest}>
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
 
     </View>
   );
@@ -236,8 +243,17 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
 
 const getStyles = (theme) =>
   StyleSheet.create({
-    container: { flex: 1, padding: 20 },
-    header: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, color: theme.text },
+    container: { flex: 1, padding: 20, paddingBottom: 80 },
+    headerContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10
+    },
+    header: { fontSize: 24, fontWeight: 'bold', color: theme.text },
+    settingsButton: {
+      padding: 8
+    },
     jobCard: {
       padding: 12,
       borderWidth: 1,
@@ -285,5 +301,17 @@ const getStyles = (theme) =>
       marginTop: 8,
       borderRadius: 6,
       backgroundColor: theme.card
+    },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 4
     }
   });
