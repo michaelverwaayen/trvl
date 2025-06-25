@@ -1,6 +1,10 @@
 // File: App.js
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import HomePage from './HomePage';
 import ChatFlowRouter from './ChatFlowRouter';
 import QuoteComparison from './QuoteComparison';
@@ -9,51 +13,59 @@ import { SUPABASE_URL } from './config';
 import { ThemeProvider, useTheme } from './ThemeContext';
 console.log('🧪 SUPABASE_URL:', SUPABASE_URL);
 
-function Main() {
-  const [screen, setScreen] = useState('home');
-  const [selectedJobId, setSelectedJobId] = useState(null);
-  const { theme } = useTheme();
+const Tab = createBottomTabNavigator();
+const HomeStack = createNativeStackNavigator();
 
-  // Simple fallback if a screen fails to render
-  const renderScreen = () => {
-    try {
-      if (screen === 'home') {
-        return (
-          <HomePage
-            onStartNewRequest={() => setScreen('chat')}
-            onSelectJob={(id) => {
-              setSelectedJobId(id);
-              setScreen('quotes');
-            }}
-            onOpenSettings={() => setScreen('settings')}
-          />
-        );
-      } else if (screen === 'chat') {
-        return <ChatFlowRouter onBackToHome={() => setScreen('home')} />;
-      } else if (screen === 'settings') {
-        return <SettingsScreen onBack={() => setScreen('home')} />;
-      } else {
-        return (
-          <QuoteComparison
-            logId={selectedJobId}
-            onBack={() => setScreen('home')}
-          />
-        );
-      }
-    } catch (err) {
-      console.error('Error rendering screen:', err);
-      return (
-        <View style={styles.centered}>
-          <Text>Something went wrong. Please reload.</Text>
-        </View>
-      );
-    }
-  };
+const HomePageWrapper = ({ navigation }) => (
+  <HomePage
+    onStartNewRequest={() => navigation.navigate('Chat')}
+    onSelectJob={(id) => navigation.navigate('QuoteComparison', { logId: id })}
+    onOpenSettings={() => navigation.navigate('Settings')}
+  />
+);
 
+function HomeStackScreen() {
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {renderScreen()}
-    </SafeAreaView>
+    <HomeStack.Navigator>
+      <HomeStack.Screen
+        name="HomeMain"
+        component={HomePageWrapper}
+        options={{ headerShown: false }}
+      />
+      <HomeStack.Screen
+        name="QuoteComparison"
+        component={QuoteComparison}
+        options={{ title: 'Quotes' }}
+      />
+    </HomeStack.Navigator>
+  );
+}
+
+function MainTabs() {
+  const { theme } = useTheme();
+  const navTheme = {
+    ...DefaultTheme,
+    colors: { ...DefaultTheme.colors, background: theme.background },
+  };
+  return (
+    <NavigationContainer theme={navTheme}>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => {
+            let icon = 'ellipse';
+            if (route.name === 'Home') icon = 'home-outline';
+            else if (route.name === 'Chat') icon = 'chatbox-ellipses-outline';
+            else if (route.name === 'Settings') icon = 'settings-outline';
+            return <Ionicons name={icon} size={size} color={color} />;
+          },
+        })}
+      >
+        <Tab.Screen name="Home" component={HomeStackScreen} />
+        <Tab.Screen name="Chat" component={ChatFlowRouter} />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
 
@@ -72,7 +84,7 @@ const styles = StyleSheet.create({
 export default function App() {
   return (
     <ThemeProvider>
-      <Main />
+      <MainTabs />
     </ThemeProvider>
   );
 }
