@@ -30,7 +30,7 @@ export default function ChatFlowRouter({ onBackToHome }) {
 
   const handleUrgentDispatch = async () => {
     try {
-      const res = await axios.post('https://rfq-a1og.onrender.com/dispatch_urgent_vendor', {
+      const res = await axios.post('http://localhost:3000/dispatch_urgent_vendor', {
         chat_history: chatHistory
       });
 
@@ -50,7 +50,7 @@ export default function ChatFlowRouter({ onBackToHome }) {
 
   const handleRFQSubmit = async (editedTicket) => {
     try {
-      const res = await axios.post('https://rfq-a1og.onrender.com/submit-rfq', editedTicket);
+      const res = await axios.post('http://localhost:3000/submit-rfq', editedTicket);
       console.log('RFQ submitted:', res.data);
       setShowReview(false);
       onBackToHome();

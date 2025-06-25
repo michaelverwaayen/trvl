@@ -1,5 +1,7 @@
 import { EventSourcePolyfill } from 'event-source-polyfill';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Picker } from 'react-native';
+import { SERVER_URL } from './config';
 import {
   View,
   TextInput,
@@ -16,8 +18,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import ChatRoom from './ChatRoom';
-
 import { useTheme } from './ThemeContext';
+import { supabase } from './supabase';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -25,123 +27,143 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [urgentChatId, setUrgentChatId] = useState(null);
   const [inUrgentChat, setInUrgentChat] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-const sendMessage = async (text = null, image = null) => {
-  if (!text && !image) return;
-
-  // Construct query safely
-  let query = '';
-  try {
-    query = new URLSearchParams({
-      text: text || '',
-      image: image || '',
-    }).toString();
-  } catch (e) {
-    console.error('❌ Failed to build query string:', e);
-    return;
-  }
-
-  // Validate base64 image input (basic check)
-  if (image && !image.startsWith('data:image/')) {
-    console.warn('⚠️ Invalid image format submitted.');
-    return;
-  }
-
-  const userMessage = {
-    role: 'user',
-    type: image ? 'image' : 'text',
-    content: text || image,
-  };
-  setMessages(prev => [...prev, userMessage]);
-  setInput('');
-  setSending(true);
-
-  try {
-    const eventSource = new EventSourcePolyfill(
-      `https://rfq-a1og.onrender.com/chat?${query}`
-    );
-
-    let fullResponse = '';
-    let done = false;
-
-    // Optional: Failsafe timeout
-    const timeoutId = setTimeout(() => {
-      if (!done) {
-        console.warn('⏰ SSE timed out. Closing connection.');
-        eventSource.close();
-        setSending(false);
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            type: 'text',
-            content: 'Sorry, the server timed out.',
-          },
-        ]);
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase.from('vendors').select('category').neq('category', '');
+      if (data) {
+        const uniqueCategories = [...new Set(data.map(v => v.category))];
+        setCategories(uniqueCategories);
       }
-    }, 30000); // 30 seconds
+    };
+    fetchCategories();
+  }, []);
 
-    eventSource.onmessage = (event) => {
-      if (done) return; // prevent handling after done
-      if (event.data === '[DONE]') {
-        done = true;
-        clearTimeout(timeoutId);
-        setSending(false);
-        eventSource.close();
-        return;
-      }
+  const sendMessage = async (text = null, image = null) => {
+    if (!text && !image) return;
 
-      fullResponse += event.data;
-      setMessages(prev => {
-        const last = prev[prev.length - 1];
-        if (last?.role === 'assistant') {
-          return [...prev.slice(0, -1), { ...last, content: fullResponse }];
-        } else {
-          return [...prev, { role: 'assistant', type: 'text', content: event.data }];
+    let query = '';
+    try {
+      query = new URLSearchParams({
+        text: text || '',
+        image: image || '',
+      }).toString();
+    } catch (e) {
+      console.error('❌ Failed to build query string:', e);
+      return;
+    }
+
+    if (image && !image.startsWith('data:image/')) {
+      console.warn('⚠️ Invalid image format submitted.');
+      return;
+    }
+
+    const userMessage = {
+      role: 'user',
+      type: image ? 'image' : 'text',
+      content: text || image,
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setSending(true);
+
+    try {
+      const eventSource = new EventSourcePolyfill(
+        `http://localhost:3000/chat?${query}`
+      );
+
+      let fullResponse = '';
+      let done = false;
+
+      const timeoutId = setTimeout(() => {
+        if (!done) {
+          console.warn('⏰ SSE timed out. Closing connection.');
+          eventSource.close();
+          setSending(false);
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              type: 'text',
+              content: 'Sorry, the server timed out.',
+            },
+          ]);
         }
-      });
-    };
+      }, 30000);
 
-    eventSource.onerror = (e) => {
-      if (!done) {
-        console.error('🔥 SSE stream error:', e);
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            type: 'text',
-            content: 'There was a connection issue. Please try again.',
-          },
-        ]);
-        clearTimeout(timeoutId);
-        setSending(false);
-        eventSource.close();
-      }
-    };
-  } catch (err) {
-    console.error('❌ Error sending message:', err);
-    setMessages(prev => [
-      ...prev,
-      {
-        role: 'assistant',
-        type: 'text',
-        content: 'Something went wrong. Please try again.',
-      },
-    ]);
-    setSending(false);
-  }
-};
+      eventSource.onmessage = (event) => {
+        if (done) return;
+        if (event.data === '[DONE]') {
+          done = true;
+          clearTimeout(timeoutId);
+          setSending(false);
+          eventSource.close();
+          return;
+        }
 
+        fullResponse += event.data;
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'assistant') {
+            return [...prev.slice(0, -1), { ...last, content: fullResponse }];
+          } else {
+            return [...prev, { role: 'assistant', type: 'text', content: event.data }];
+          }
+        });
+      };
 
+      eventSource.onerror = (e) => {
+        if (!done) {
+          console.error('🔥 SSE stream error:', e);
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              type: 'text',
+              content: 'There was a connection issue. Please try again.',
+            },
+          ]);
+          clearTimeout(timeoutId);
+          setSending(false);
+          eventSource.close();
+        }
+      };
+    } catch (err) {
+      console.error('❌ Error sending message:', err);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          type: 'text',
+          content: 'Something went wrong. Please try again.',
+        },
+      ]);
+      setSending(false);
+    }
+  };
 
   const handleGetHelpNow = async () => {
+    if (!showCategoryDropdown) {
+      setShowCategoryDropdown(true);
+      return;
+    }
+
+    if (!selectedCategory) {
+      alert('Please select a category.');
+      return;
+    }
+
     const fullTranscript = messages.map(m => m.content).join('\n');
     try {
-      const res = await axios.post('https://rfq-a1og.onrender.com/dispatch_urgent_vendor', {
-        chat_history: fullTranscript
-      });
+      const res = await axios.post('http://localhost:3000/dispatch_urgent_vendor', {
+  chat_history: fullTranscript,
+  category: selectedCategory  // ✅ ADD THIS LINE
+});
 
       if (res.data.success && res.data.chat_room_id) {
         console.log('🚀 Urgent chat initiated:', res.data.chat_room_id);
@@ -172,15 +194,14 @@ const sendMessage = async (text = null, image = null) => {
       {item.type === 'image' && item.content ? (
         <Image source={{ uri: item.content }} style={styles.image} />
       ) : (
-        <Text>{item.content || '⚠️ Empty message'}</Text>
+        <Text style={item.role === 'user' ? styles.userText : styles.assistantText}>
+          {item.content || '⚠️ Empty message'}
+        </Text>
       )}
     </View>
   );
 
-  console.log('Rendering ChatScreen', { messages, sending, inUrgentChat, urgentChatId });
-
   if (inUrgentChat && urgentChatId) {
-    console.log('🎯 Entering urgent chat');
     return <ChatRoom chatRoomId={urgentChatId} sender="user@example.com" />;
   }
 
@@ -209,9 +230,22 @@ const sendMessage = async (text = null, image = null) => {
           <Text style={{ fontSize: 20 }}>📷</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.manualRow}>
-        <Button title="🚨 Get Help Now" onPress={handleGetHelpNow} disabled={sending} />
-      </View>
+
+      {showCategoryDropdown && (
+        <Picker
+          selectedValue={selectedCategory}
+          onValueChange={(itemValue) => setSelectedCategory(itemValue)}
+          style={{ marginTop: 10, color: theme.text, backgroundColor: theme.card }}
+        >
+          <Picker.Item label="Select a category" value="" />
+          {categories.map((cat, idx) => (
+            <Picker.Item key={idx} label={cat} value={cat} />
+          ))}
+        </Picker>
+      )}
+
+    
+
       {sending && <ActivityIndicator style={{ marginTop: 10 }} size="small" color={theme.primary} />}
     </KeyboardAvoidingView>
   );
@@ -228,5 +262,6 @@ const getStyles = (theme) =>
     image: { width: 150, height: 150, borderRadius: 8 },
     imageBtn: { marginLeft: 5, padding: 8 },
     manualRow: { marginTop: 10 },
+    userText: { color: '#FFFFFF' },
+    assistantText: { color: '#FFA500' }
   });
-

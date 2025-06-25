@@ -6,7 +6,23 @@ const { OpenAI } = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
 const { Expo } = require('expo-server-sdk');
+const SYSTEM_PROMPT = `
+You are a triage AI for home repair issues. Your job is to ask smart, leading questions to help gather information. 
+You will continue asking questions until you feel at least 75% confident about a potential cause.
 
+Rules:
+- Begin by asking general questions.
+- Use answers to ask progressively more specific follow-up questions.
+- Never suggest a cause until you're confident (≥ 75%).
+- When confidence reaches 75%, output ONE or TWO possible causes, clearly marked, and explain why you're confident.
+- Track and include your confidence score in each response (e.g., "Confidence: 45%").
+- Format:
+  - Questions to ask the user
+  - Confidence score
+  - (If confident enough) Potential issue
+
+Your tone should be friendly and professional. Ask only 1–2 questions at a time.
+`;
 require('dotenv').config();
 
 const app = express();
@@ -61,16 +77,16 @@ app.get('/chat', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      stream: true,
-      messages: [
-        {
-          role: 'user',
-          content: multimodalContent // ✅ always an array
-        }
-      ]
-    });
+  const messages = [
+  { role: 'system', content: SYSTEM_PROMPT },
+  { role: 'user', content: multimodalContent }
+];
+
+const stream = await openai.chat.completions.create({
+  model: 'gpt-4o',
+  stream: true,
+  messages
+});
 
     let fullReply = '';
     for await (const chunk of stream) {
@@ -142,6 +158,7 @@ function isWithinRadius(lat1, lon1, lat2, lon2, radiusKm) {
 app.get('/jobs-for-vendor/:vendorId', async (req, res) => {
   const vendorId = req.params.vendorId;
   try {
+    console.log('🚨 Dispatching vendor for category:', category);
     const { data: vendor } = await supabase
       .from('vendors')
       .select('*').eq('id', vendorId).single();
@@ -154,7 +171,7 @@ app.get('/jobs-for-vendor/:vendorId', async (req, res) => {
     const filtered = jobs.filter(job => {
       const loc = job.user_location?.coordinates;
       return loc && job.category === category &&
-             isWithinRadius(vLat, vLon, loc[1], loc[0], radius_km);
+             isWithinRadius(vLat, vLon, loc[1], loc[0], 20000);
     });
 
     res.json(filtered);
@@ -190,15 +207,33 @@ app.get('/rfq-dashboard', async (req, res) => {
 
 // === /dispatch_urgent_vendor ===
 app.post('/dispatch_urgent_vendor', async (req, res) => {
-  const { chat_history } = req.body;
+  const { chat_history, category: passedCategory } = req.body; // ✅ Destructure once
   const chatRoomId = uuidv4();
   const severity = 'high';
   const expires_at = new Date(Date.now() + 20 * 60 * 1000);
 
-  const category = await guessCategoryFromHistory(chat_history);
+  const category = passedCategory || await guessCategoryFromHistory(chat_history); // ✅ Use fallback logic
+  console.log('🚨 Dispatching vendor for category:', category);
   const { data: vendor } = await supabase
     .from('vendors')
     .select('*').eq('category', category).maybeSingle();
+console.log('🧪 Searching for vendor with category:', category);
+const { data: debugVendors, error: debugError } = await supabase
+  .from('vendors')
+  .select('*')
+  .eq('category', category);
+
+  const { data: debugJobs } = await supabase
+  .from('chat_logs')
+  .select('*')
+  .eq('category', category)
+  .eq('status', 'open');
+
+console.log('📦 Open jobs in this category:', debugJobs);
+
+
+console.log('🧱 All vendors matching category:', debugVendors);
+if (debugError) console.error('⚠️ Vendor query error:', debugError);
 
   if (!vendor || !vendor.email) {
     return res.json({ success: false, reason: 'No vendor available' });

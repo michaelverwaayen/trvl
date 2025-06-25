@@ -16,7 +16,8 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { OPENAI_API_KEY } from './config';
 import { supabase } from './supabase';
-
+import { Picker } from 'react-native';
+import { SERVER_URL } from './config';
 
 export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSettings }) {
   const [jobs, setJobs] = useState([]);
@@ -26,6 +27,8 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const [selectedCategory, setSelectedCategory] = useState('All');
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const [showDropdown, setShowDropdown] = useState(false);
+
 
   const statusColors = {
     open: '#FFA500',
@@ -160,6 +163,45 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
+
+      <Button title="Get Urgent Help" onPress={() => setShowDropdown(true)} />
+
+{showDropdown && (
+  <>
+    <Text>Select Category:</Text>
+    <Picker
+      selectedValue={selectedCategory}
+      onValueChange={(itemValue) => setSelectedCategory(itemValue)}
+    >
+      <Picker.Item label="Plumbing" value="plumbing" />
+      <Picker.Item label="Electrical" value="electrical" />
+      <Picker.Item label="General" value="general" />
+      {/* Add other categories here */}
+    </Picker>
+
+    <Button
+      title="Dispatch Vendor"
+      onPress={async () => {
+        const res = await fetch(`${SERVER_URL}/dispatch_urgent_vendor`, {
+          method: 'POST',
+          body: JSON.stringify({
+            chat_history: "Urgent help requested",
+            category: selectedCategory,
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        if (json.success) {
+          // navigate to chat room if needed
+          alert("Vendor dispatched!");
+        } else {
+          alert("No vendor available.");
+        }
+      }}
+    />
+  </>
+)}
+
     </View>
   );
 }
