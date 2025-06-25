@@ -1,5 +1,5 @@
 import { EventSourcePolyfill } from 'event-source-polyfill';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Picker } from 'react-native';
 import { SERVER_URL } from './config';
 import {
@@ -20,6 +20,7 @@ import axios from 'axios';
 import ChatRoom from './ChatRoom';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -32,6 +33,7 @@ export default function ChatScreen() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const sessionIdRef = useRef(uuidv4());
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -42,6 +44,18 @@ export default function ChatScreen() {
       }
     };
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const loadMessages = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('chat_room_id', sessionIdRef.current)
+        .order('created_at');
+      if (data) setMessages(data);
+    };
+    loadMessages();
   }, []);
 
   const sendMessage = async (text = null, image = null) => {
@@ -70,6 +84,11 @@ export default function ChatScreen() {
       timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMessage]);
+    supabase.from('chat_messages').insert({
+      chat_room_id: sessionIdRef.current,
+      sender: 'user',
+      message: text || image || ''
+    });
     setInput('');
     setSending(true);
 
@@ -95,6 +114,11 @@ export default function ChatScreen() {
               timestamp: new Date().toISOString(),
             },
           ]);
+          supabase.from('chat_messages').insert({
+            chat_room_id: sessionIdRef.current,
+            sender: 'assistant',
+            message: 'Sorry, the server timed out.'
+          });
         }
       }, 30000);
 
@@ -106,6 +130,11 @@ export default function ChatScreen() {
           clearTimeout(timeoutId);
           setSending(false);
           eventSource.close();
+          supabase.from('chat_messages').insert({
+            chat_room_id: sessionIdRef.current,
+            sender: 'assistant',
+            message: fullResponse
+          });
           return;
         }
 
@@ -140,6 +169,11 @@ export default function ChatScreen() {
               timestamp: new Date().toISOString(),
             },
           ]);
+          supabase.from('chat_messages').insert({
+            chat_room_id: sessionIdRef.current,
+            sender: 'assistant',
+            message: 'There was a connection issue. Please try again.'
+          });
           clearTimeout(timeoutId);
           setSending(false);
           eventSource.close();
@@ -156,6 +190,11 @@ export default function ChatScreen() {
           timestamp: new Date().toISOString(),
         },
       ]);
+      supabase.from('chat_messages').insert({
+        chat_room_id: sessionIdRef.current,
+        sender: 'assistant',
+        message: 'Something went wrong. Please try again.'
+      });
       setSending(false);
     }
   };
