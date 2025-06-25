@@ -181,6 +181,32 @@ app.get('/jobs-for-vendor/:vendorId', async (req, res) => {
   }
 });
 
+// === /available_vendors ===
+app.get('/available_vendors', async (req, res) => {
+  const { category, lat, lon } = req.query;
+  try {
+    let query = supabase.from('vendors').select('*');
+    if (category) query = query.eq('category', category);
+    const { data: vendors, error } = await query;
+    if (error) throw error;
+
+    const latNum = parseFloat(lat);
+    const lonNum = parseFloat(lon);
+    if (!isNaN(latNum) && !isNaN(lonNum)) {
+      const filtered = vendors.filter(v =>
+        v.lat && v.lon && v.radius_km
+          ? isWithinRadius(latNum, lonNum, v.lat, v.lon, v.radius_km)
+          : true
+      );
+      return res.json(filtered);
+    }
+    res.json(vendors);
+  } catch (err) {
+    console.error('Vendor list error:', err);
+    res.status(500).send('Failed to get vendors');
+  }
+});
+
 // === /rfq-dashboard ===
 app.get('/rfq-dashboard', async (req, res) => {
   try {
@@ -207,16 +233,27 @@ app.get('/rfq-dashboard', async (req, res) => {
 
 // === /dispatch_urgent_vendor ===
 app.post('/dispatch_urgent_vendor', async (req, res) => {
-  const { chat_history, category: passedCategory } = req.body; // ✅ Destructure once
+  const { chat_history, category: passedCategory, vendor_id } = req.body; // ✅ Destructure once
   const chatRoomId = uuidv4();
   const severity = 'high';
   const expires_at = new Date(Date.now() + 20 * 60 * 1000);
 
   const category = passedCategory || await guessCategoryFromHistory(chat_history); // ✅ Use fallback logic
   console.log('🚨 Dispatching vendor for category:', category);
-  const { data: vendor } = await supabase
-    .from('vendors')
-    .select('*').eq('category', category).maybeSingle();
+  let vendor;
+  if (vendor_id) {
+    ({ data: vendor } = await supabase
+      .from('vendors')
+      .select('*')
+      .eq('id', vendor_id)
+      .maybeSingle());
+  } else {
+    ({ data: vendor } = await supabase
+      .from('vendors')
+      .select('*')
+      .eq('category', category)
+      .maybeSingle());
+  }
 console.log('🧪 Searching for vendor with category:', category);
 const { data: debugVendors, error: debugError } = await supabase
   .from('vendors')

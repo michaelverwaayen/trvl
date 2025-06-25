@@ -28,6 +28,44 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [vendors, setVendors] = useState([]);
+  const [loadingVendors, setLoadingVendors] = useState(false);
+
+  const fetchVendors = async () => {
+    setLoadingVendors(true);
+    try {
+      const res = await fetch(
+        `${SERVER_URL}/available_vendors?category=${selectedCategory}`
+      );
+      const data = await res.json();
+      setVendors(data || []);
+    } catch (err) {
+      console.error('Vendor fetch error', err);
+      setVendors([]);
+    } finally {
+      setLoadingVendors(false);
+    }
+  };
+
+  const dispatchVendor = async vendorId => {
+    const res = await fetch(`${SERVER_URL}/dispatch_urgent_vendor`, {
+      method: 'POST',
+      body: JSON.stringify({
+        chat_history: 'Urgent help requested',
+        category: selectedCategory,
+        vendor_id: vendorId
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const json = await res.json();
+    if (json.success) {
+      alert('Vendor dispatched!');
+      setShowDropdown(false);
+      setVendors([]);
+    } else {
+      alert('No vendor available.');
+    }
+  };
 
 
   const statusColors = {
@@ -166,41 +204,31 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
 
       <Button title="Get Urgent Help" onPress={() => setShowDropdown(true)} />
 
-{showDropdown && (
-  <>
-    <Text>Select Category:</Text>
-    <Picker
-      selectedValue={selectedCategory}
-      onValueChange={(itemValue) => setSelectedCategory(itemValue)}
-    >
-      <Picker.Item label="Plumbing" value="plumbing" />
-      <Picker.Item label="Electrical" value="electrical" />
-      <Picker.Item label="General" value="general" />
-      {/* Add other categories here */}
-    </Picker>
-
-    <Button
-      title="Dispatch Vendor"
-      onPress={async () => {
-        const res = await fetch(`${SERVER_URL}/dispatch_urgent_vendor`, {
-          method: 'POST',
-          body: JSON.stringify({
-            chat_history: "Urgent help requested",
-            category: selectedCategory,
-          }),
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const json = await res.json();
-        if (json.success) {
-          // navigate to chat room if needed
-          alert("Vendor dispatched!");
-        } else {
-          alert("No vendor available.");
-        }
-      }}
-    />
-  </>
-)}
+      {showDropdown && (
+        <>
+          <Text>Select Category:</Text>
+          <Picker
+            selectedValue={selectedCategory}
+            onValueChange={itemValue => setSelectedCategory(itemValue)}
+          >
+            <Picker.Item label="Plumbing" value="plumbing" />
+            <Picker.Item label="Electrical" value="electrical" />
+            <Picker.Item label="General" value="general" />
+            {/* Add other categories here */}
+          </Picker>
+          <Button title="Find Vendors" onPress={fetchVendors} />
+          {loadingVendors && <ActivityIndicator style={{ marginTop: 10 }} />}
+          {vendors.map(v => (
+            <TouchableOpacity
+              key={v.id}
+              style={styles.vendorItem}
+              onPress={() => dispatchVendor(v.id)}
+            >
+              <Text>{v.name || v.email}</Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
 
     </View>
   );
@@ -249,5 +277,13 @@ const getStyles = (theme) =>
     selectedChip: {
       backgroundColor: theme.primary,
       borderColor: theme.primary
+    },
+    vendorItem: {
+      padding: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginTop: 8,
+      borderRadius: 6,
+      backgroundColor: theme.card
     }
   });
