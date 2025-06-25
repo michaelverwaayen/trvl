@@ -22,3 +22,13 @@ create table if not exists chat_logs (
     status text not null default 'open',
     created_at timestamp with time zone default now()
 );
+
+-- Individual messages exchanged during a chat session
+create table if not exists chat_messages (
+    id uuid primary key default gen_random_uuid(),
+    session_id text not null,
+    role text not null,
+    type text,
+    content text,
+    created_at timestamp with time zone default now()
+);

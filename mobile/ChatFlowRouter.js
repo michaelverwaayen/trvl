@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import ChatScreen from './ChatScreen';
 import ReviewTicketScreen from './ReviewTicketScreen';
 import axios from 'axios';
@@ -8,6 +9,7 @@ export default function ChatFlowRouter({ onBackToHome }) {
   const [chatHistory, setChatHistory] = useState('');
   const [showReview, setShowReview] = useState(false);
   const [chatRoomId, setChatRoomId] = useState(null);
+  const [sessionId] = useState(uuidv4());
 
   const handleChatUpdate = (newMessages, fullTranscript) => {
     setMessages(newMessages);
@@ -72,6 +74,7 @@ export default function ChatFlowRouter({ onBackToHome }) {
       onUpdate={handleChatUpdate}
       onManualSubmit={handleManualSubmit}
       onUrgentHelp={handleUrgentDispatch}
+      sessionId={sessionId}
     />
   );
 }

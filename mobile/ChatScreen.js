@@ -21,7 +21,7 @@ import ChatRoom from './ChatRoom';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
 
-export default function ChatScreen() {
+export default function ChatScreen({ sessionId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -32,6 +32,32 @@ export default function ChatScreen() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const { theme } = useTheme();
   const styles = getStyles(theme);
+
+  const saveMessage = async (msg) => {
+    try {
+      await supabase.from('chat_messages').insert({
+        session_id: sessionId,
+        role: msg.role,
+        type: msg.type,
+        content: msg.content,
+      });
+    } catch (err) {
+      console.error('Failed to save message', err);
+    }
+  };
+
+  useEffect(() => {
+    const loadMessages = async () => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at');
+      if (error) console.error('Failed to load messages', error);
+      if (data) setMessages(data);
+    };
+    if (sessionId) loadMessages();
+  }, [sessionId]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -70,6 +96,7 @@ export default function ChatScreen() {
       timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMessage]);
+    saveMessage(userMessage);
     setInput('');
     setSending(true);
 
@@ -95,6 +122,11 @@ export default function ChatScreen() {
               timestamp: new Date().toISOString(),
             },
           ]);
+          saveMessage({
+            role: 'assistant',
+            type: 'text',
+            content: 'Sorry, the server timed out.',
+          });
         }
       }, 30000);
 
@@ -106,6 +138,7 @@ export default function ChatScreen() {
           clearTimeout(timeoutId);
           setSending(false);
           eventSource.close();
+          saveMessage({ role: 'assistant', type: 'text', content: fullResponse });
           return;
         }
 
@@ -140,6 +173,11 @@ export default function ChatScreen() {
               timestamp: new Date().toISOString(),
             },
           ]);
+          saveMessage({
+            role: 'assistant',
+            type: 'text',
+            content: 'There was a connection issue. Please try again.',
+          });
           clearTimeout(timeoutId);
           setSending(false);
           eventSource.close();
@@ -156,6 +194,11 @@ export default function ChatScreen() {
           timestamp: new Date().toISOString(),
         },
       ]);
+      saveMessage({
+        role: 'assistant',
+        type: 'text',
+        content: 'Something went wrong. Please try again.',
+      });
       setSending(false);
     }
   };
