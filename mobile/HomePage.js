@@ -19,8 +19,9 @@ import { OPENAI_API_KEY } from './config';
 import { supabase } from './supabase';
 import { Picker } from 'react-native';
 import { SERVER_URL } from './config';
+import * as Location from 'expo-location';
 
-export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSettings }) {
+export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSettings, onGetEstimate }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,8 +36,14 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const fetchVendors = async () => {
     setLoadingVendors(true);
     try {
+      let locParams = '';
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({});
+        locParams = `&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
+      }
       const res = await fetch(
-        `${SERVER_URL}/available_vendors?category=${selectedCategory}`
+        `${SERVER_URL}/available_vendors?category=${selectedCategory}${locParams}`
       );
       const data = await res.json();
       setVendors(data || []);
@@ -205,6 +212,8 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
+
+      <Button title="Get Estimate" onPress={onGetEstimate} />
 
       <Button title="Get Urgent Help" onPress={() => setShowDropdown(true)} />
 
