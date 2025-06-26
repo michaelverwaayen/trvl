@@ -15,19 +15,53 @@ export default function RegisterScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  const handleRegister = async () => {
-    setLoading(true);
-    const { data, error } = await signUp(email, password);
-    if (error) {
-      alert(error.message);
-      setLoading(false);
-      return;
-    }
-    if (isVendor && data.user) {
-      await supabase.from('vendors').insert([{ id: data.user.id, email, name, category }]);
-    }
+const handleRegister = async () => {
+  setLoading(true);
+
+  // Sign up
+  const { data, error } = await signUp(email, password);
+
+  if (error) {
+    alert(error.message);
     setLoading(false);
-  };
+    return;
+  }
+
+  alert('Check your email to confirm your account.');
+
+  // Poll until the user is confirmed
+  const pollForConfirmation = setInterval(async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const confirmed = userData?.user?.email_confirmed_at;
+
+    if (confirmed) {
+      clearInterval(pollForConfirmation);
+      console.log("✅ Email confirmed");
+
+      // Optional: insert vendor profile after confirmation
+      if (isVendor) {
+        const { error: insertError } = await supabase.from('vendors').insert([{
+          id: userData.user.id,
+          email,
+          name,
+          category
+        }]);
+
+        if (insertError) {
+          console.error('Vendor creation failed:', insertError.message);
+          alert('Vendor profile creation failed.');
+        }
+      }
+
+      setLoading(false);
+      navigation.navigate('Login'); // or navigate to dashboard
+    } else {
+      console.log("Waiting for confirmation...");
+    }
+  }, 3000); // poll every 3 seconds
+};
+
+
 
   return (
     <View style={styles.container}>
