@@ -15,8 +15,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from './ThemeContext';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { OPENAI_API_KEY } from './config';
 import { supabase } from './supabase';
+import { useAuth } from './AuthContext';
 import { Picker } from 'react-native';
 import { SERVER_URL } from './config';
 import * as Location from 'expo-location';
@@ -29,9 +29,11 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
   const [selectedCategory, setSelectedCategory] = useState('All');
   const { theme } = useTheme();
   const styles = getStyles(theme);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [vendors, setVendors] = useState([]);
   const [loadingVendors, setLoadingVendors] = useState(false);
+  const [chats, setChats] = useState([]);
+  const [loadingChats, setLoadingChats] = useState(true);
+  const { user } = useAuth();
 
   const fetchVendors = async () => {
     setLoadingVendors(true);
@@ -68,10 +70,34 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
     const json = await res.json();
     if (json.success) {
       alert('Vendor dispatched!');
-      setShowDropdown(false);
       setVendors([]);
     } else {
       alert('No vendor available.');
+    }
+  };
+
+  const fetchChats = async () => {
+    if (!user?.email) {
+      setLoadingChats(false);
+      return;
+    }
+    setLoadingChats(true);
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('user_email', user.email)
+        .not('chat_room_id', 'is', null)
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Chat fetch error', error);
+      } else {
+        setChats(data || []);
+      }
+    } catch (err) {
+      console.error('Chat fetch exception', err);
+    } finally {
+      setLoadingChats(false);
     }
   };
 
@@ -130,9 +156,11 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
     };
 
     fetchJobs();
+    fetchChats();
   }, []);
 
   const categories = ['All', ...Array.from(new Set(jobs.map(j => j.category).filter(Boolean)))];
+  const vendorCategories = ['All', 'plumbing', 'electrical', 'general'];
   const filteredJobs = jobs.filter(j => {
     const matchesSearch = j.assistant_reply?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || j.category === selectedCategory;
@@ -162,6 +190,13 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
         </Text>
       </View>
     </TouchableOpacity>
+  );
+
+  const renderChatItem = ({ item }) => (
+    <View style={styles.jobCard}>
+      <Text style={styles.summary}>Chat: {item.assistant_reply?.slice(0, 60) || 'No summary'}</Text>
+      <Text>{new Date(item.created_at).toLocaleString()}</Text>
+    </View>
   );
 
   return (
@@ -215,33 +250,42 @@ export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSetting
 
       <Button title="Get Estimate" onPress={onGetEstimate} />
 
-      <Button title="Get Urgent Help" onPress={() => setShowDropdown(true)} />
-
-      {showDropdown && (
-        <>
-          <Text>Select Category:</Text>
-          <Picker
-            selectedValue={selectedCategory}
-            onValueChange={itemValue => setSelectedCategory(itemValue)}
-          >
-            <Picker.Item label="Plumbing" value="plumbing" />
-            <Picker.Item label="Electrical" value="electrical" />
-            <Picker.Item label="General" value="general" />
-            {/* Add other categories here */}
-          </Picker>
-          <Button title="Find Vendors" onPress={fetchVendors} />
-          {loadingVendors && <ActivityIndicator style={{ marginTop: 10 }} />}
-          {vendors.map(v => (
-            <TouchableOpacity
-              key={v.id}
-              style={styles.vendorItem}
-              onPress={() => dispatchVendor(v.id)}
-            >
-              <Text>{v.name || v.email}</Text>
-            </TouchableOpacity>
+      <View style={{ marginTop: 20 }}>
+        <Text style={styles.sectionHeader}>Nearby Vendors</Text>
+        <Picker
+          selectedValue={selectedCategory}
+          onValueChange={itemValue => setSelectedCategory(itemValue)}
+        >
+          {vendorCategories.map(cat => (
+            <Picker.Item key={cat} label={cat} value={cat} />
           ))}
-        </>
-      )}
+        </Picker>
+        <Button title="Search" onPress={fetchVendors} />
+        {loadingVendors && <ActivityIndicator style={{ marginTop: 10 }} />}
+        {vendors.map(v => (
+          <TouchableOpacity
+            key={v.id}
+            style={styles.vendorItem}
+            onPress={() => dispatchVendor(v.id)}
+          >
+            <Text>{v.name || v.email}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {loadingChats ? (
+        <ActivityIndicator style={{ marginTop: 20 }} />
+      ) : chats.length > 0 ? (
+        <View style={{ marginTop: 20 }}>
+          <Text style={styles.sectionHeader}>Active Chats</Text>
+          <FlatList
+            data={chats}
+            keyExtractor={(item, idx) => item.id?.toString() || idx.toString()}
+            renderItem={renderChatItem}
+          />
+        </View>
+      ) : null}
+
       <TouchableOpacity style={styles.fab} onPress={onStartNewRequest}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
@@ -310,6 +354,12 @@ const getStyles = (theme) =>
       marginTop: 8,
       borderRadius: 6,
       backgroundColor: theme.card
+    },
+    sectionHeader: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 6,
+      color: theme.text
     },
     fab: {
       position: 'absolute',
