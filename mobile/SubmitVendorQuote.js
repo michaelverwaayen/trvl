@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from 'react-native';
 import { supabase } from './supabase';
 import { useTheme } from './ThemeContext';
+import { useAuth } from './AuthContext';
 
 export default function SubmitVendorQuote({ route, navigation }) {
-  const { jobId, vendorId } = route.params || {};
+  const { user } = useAuth();
+  const vendorId = user?.id;
+  const { jobId } = route.params || {};
   const [quote, setQuote] = useState('');
   const [availability, setAvailability] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +20,7 @@ export default function SubmitVendorQuote({ route, navigation }) {
     const { error } = await supabase.from('quotes').insert([
       {
         log_id: jobId,
-        vendor_email: vendorId,
+        vendor_id: vendorId,
         quote,
         availability,
         status: 'submitted'

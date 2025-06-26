@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SERVER_URL } from './config';
 import { useTheme } from './ThemeContext';
+import { useAuth } from './AuthContext';
 
 export default function VendorJobsScreen() {
-  const [vendorId, setVendorId] = useState('');
+  const { user } = useAuth();
+  const vendorId = user?.id;
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
@@ -27,6 +29,8 @@ export default function VendorJobsScreen() {
     }
   };
 
+  useEffect(() => { fetchJobs(); }, [vendorId]);
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.summary}>{item.assistant_reply}</Text>
@@ -39,7 +43,6 @@ export default function VendorJobsScreen() {
         onPress={() =>
           navigation.navigate('SubmitVendorQuote', {
             jobId: item.id,
-            vendorId,
           })
         }
       />
@@ -49,7 +52,7 @@ export default function VendorJobsScreen() {
           onPress={() =>
             navigation.navigate('VendorChatRoom', {
               chatRoomId: item.id,
-              vendorEmail: vendorId,
+              vendorId,
             })
           }
         />
@@ -60,13 +63,6 @@ export default function VendorJobsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Vendor Jobs</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Vendor ID"
-        value={vendorId}
-        onChangeText={setVendorId}
-      />
-      <Button title="Fetch Jobs" onPress={fetchJobs} />
       {loading && <ActivityIndicator style={{ marginTop: 20 }} />}
       <FlatList
         data={jobs}
@@ -82,7 +78,6 @@ const getStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: theme.background },
     header: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, color: theme.text },
-    input: { borderWidth: 1, borderColor: theme.border, padding: 10, borderRadius: 6, marginBottom: 10, color: theme.text },
     card: { padding: 12, borderWidth: 1, borderColor: theme.border, borderRadius: 6, marginVertical: 6, backgroundColor: theme.card },
     summary: { fontWeight: 'bold', marginBottom: 4 },
   });
