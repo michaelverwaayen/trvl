@@ -14,6 +14,12 @@ This project aims to build a mobile application that allows users to request quo
 - **Vendor Categories**: Organize service providers by category (plumbers, electricians, etc.) for easier search.
 - **Quote Deadlines**: Allow users to set expiration dates for incoming quotes.
 - **In-App Payments**: Enable secure payment processing once a quote is accepted.
+- **Estimate Requests**: Users can get a rough price range for a short summary before submitting a ticket.
+- **Vendor Job List**: Vendors can fetch nearby open jobs based on their ID.
+- **Admin Dashboard**: View all requests and quotes in a web-based dashboard.
+- **Location-aware Vendor Search**: Auto-detect user location when fetching available vendors.
+- **Urgent Chat Rooms**: Real-time chat opened when dispatching high severity jobs.
+- **Job Timeline**: Track request status from open to completion.
 
 ## Potential UI Improvements
 

@@ -8,6 +8,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import HomePage from './HomePage';
 import ChatFlowRouter from './ChatFlowRouter';
 import QuoteComparison from './QuoteComparison';
+import EstimateScreen from './EstimateScreen';
+import VendorJobsScreen from './VendorJobsScreen';
+import AdminDashboardScreen from './AdminDashboardScreen';
 import SettingsScreen from './SettingsScreen';
 import { SUPABASE_URL } from './config';
 import { ThemeProvider, useTheme } from './ThemeContext';
@@ -21,6 +24,7 @@ const HomePageWrapper = ({ navigation }) => (
     onStartNewRequest={() => navigation.navigate('Chat')}
     onSelectJob={(id) => navigation.navigate('QuoteComparison', { logId: id })}
     onOpenSettings={() => navigation.navigate('Settings')}
+    onGetEstimate={() => navigation.navigate('Estimate')}
   />
 );
 
@@ -36,6 +40,11 @@ function HomeStackScreen() {
         name="QuoteComparison"
         component={QuoteComparison}
         options={{ title: 'Quotes' }}
+      />
+      <HomeStack.Screen
+        name="Estimate"
+        component={EstimateScreen}
+        options={{ title: 'Estimate' }}
       />
     </HomeStack.Navigator>
   );
@@ -56,6 +65,8 @@ function MainTabs() {
             let icon = 'ellipse';
             if (route.name === 'Home') icon = 'home-outline';
             else if (route.name === 'Chat') icon = 'chatbox-ellipses-outline';
+            else if (route.name === 'Vendor') icon = 'briefcase-outline';
+            else if (route.name === 'Admin') icon = 'analytics-outline';
             else if (route.name === 'Settings') icon = 'settings-outline';
             return <Ionicons name={icon} size={size} color={color} />;
           },
@@ -63,6 +74,8 @@ function MainTabs() {
       >
         <Tab.Screen name="Home" component={HomeStackScreen} />
         <Tab.Screen name="Chat" component={ChatFlowRouter} />
+        <Tab.Screen name="Vendor" component={VendorJobsScreen} />
+        <Tab.Screen name="Admin" component={AdminDashboardScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
     </NavigationContainer>
