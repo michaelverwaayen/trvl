@@ -1,13 +1,15 @@
 // === VendorChatRoom.js ===
 
 import React, { useEffect, useState } from 'react';
-import Constants from 'expo-constants';
-import { OPENAI_API_KEY } from './config';
+import { View, Text, ScrollView, TextInput, Button, StyleSheet } from 'react-native';
 import { supabase } from './supabase';
 
-export default function VendorChatRoom({ chatRoomId, vendorEmail }) {
+export default function VendorChatRoom({ route }) {
+  const { chatRoomId, vendorEmail } = route.params || {};
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [quote, setQuote] = useState('');
+  const [availability, setAvailability] = useState('');
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -44,47 +46,73 @@ export default function VendorChatRoom({ chatRoomId, vendorEmail }) {
     setInput('');
   };
 
+  const submitQuote = async () => {
+    if (!quote || !availability) return;
+    const { error } = await supabase.from('quotes').insert({
+      log_id: chatRoomId,
+      vendor_email: vendorEmail,
+      quote,
+      availability,
+      status: 'submitted'
+    });
+    if (!error) {
+      alert('Quote submitted!');
+      setQuote('');
+      setAvailability('');
+    }
+  };
+
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Chat with Customer</h2>
-      <div style={{ maxHeight: 300, overflowY: 'scroll', border: '1px solid #ccc', padding: 10 }}>
+    <View style={styles.container}>
+      <Text style={styles.header}>Chat with Customer</Text>
+      <ScrollView style={styles.messages}>
         {messages.map(msg => (
-          <div key={msg.id} style={{ margin: '10px 0' }}>
-            <strong>{msg.sender === vendorEmail ? 'You' : 'Customer'}:</strong> {msg.message}
-          </div>
+          <View key={msg.id} style={styles.message}>
+            <Text>
+              <Text style={styles.bold}>{msg.sender === vendorEmail ? 'You' : 'Customer'}:</Text> {msg.message}
+            </Text>
+          </View>
         ))}
-      </div>
-      <input
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        placeholder="Type your reply..."
-        style={{ width: '80%', marginRight: 10 }}
-      />
-      <button onClick={sendMessage}>Send</button>
-    </div>
+      </ScrollView>
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.input}
+          value={input}
+          onChangeText={setInput}
+          placeholder="Type your reply..."
+        />
+        <Button title="Send" onPress={sendMessage} />
+      </View>
+
+      <View style={styles.quoteSection}>
+        <Text style={styles.subHeader}>Submit Quote</Text>
+        <TextInput
+          style={styles.input}
+          value={quote}
+          onChangeText={setQuote}
+          placeholder="Quote $"
+          keyboardType="numeric"
+        />
+        <TextInput
+          style={styles.input}
+          value={availability}
+          onChangeText={setAvailability}
+          placeholder="Availability (YYYY-MM-DD)"
+        />
+        <Button title="Submit" onPress={submitQuote} />
+      </View>
+    </View>
   );
 }
-<div style={{ marginTop: 20 }}>
-  <h4>Submit Quote</h4>
-  <form
-    onSubmit={async (e) => {
-      e.preventDefault();
-      const quote = e.target.elements.quote.value;
-      const availability = e.target.elements.availability.value;
 
-      const { error } = await supabase.from('quotes').insert({
-        log_id: chatRoomId,
-        vendor_email: vendorEmail,
-        quote,
-        availability,
-        status: 'submitted'
-      });
-
-      if (!error) alert('Quote submitted!');
-    }}
-  >
-    <input type="number" name="quote" placeholder="Quote $" required />
-    <input type="datetime-local" name="availability" required />
-    <button type="submit">Submit</button>
-  </form>
-</div>
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20 },
+  header: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  messages: { maxHeight: 300, borderWidth: 1, borderColor: '#ccc', padding: 10 },
+  message: { marginVertical: 5 },
+  bold: { fontWeight: 'bold' },
+  inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+  input: { flex: 1, borderWidth: 1, borderColor: '#ccc', padding: 8, marginRight: 10 },
+  quoteSection: { marginTop: 20 },
+  subHeader: { fontSize: 16, fontWeight: 'bold', marginBottom: 10 }
+});

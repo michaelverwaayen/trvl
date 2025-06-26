@@ -43,6 +43,17 @@ export default function VendorJobsScreen() {
           })
         }
       />
+      {item.id && (
+        <Button
+          title="Open Chat"
+          onPress={() =>
+            navigation.navigate('VendorChatRoom', {
+              chatRoomId: item.id,
+              vendorEmail: vendorId,
+            })
+          }
+        />
+      )}
     </View>
   );
 
