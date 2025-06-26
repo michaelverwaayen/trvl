@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Switch, StyleSheet, Appearance } from 'react-native';
+import { View, Text, Switch, StyleSheet, Appearance, TouchableOpacity } from 'react-native';
 import { useTheme } from './ThemeContext';
 
-export default function SettingsScreen({ onBack }) {
+export default function SettingsScreen({ navigation }) {
   const { theme, themeName, setThemeName } = useTheme();
 
   const useSystem = themeName === 'system';
@@ -27,9 +27,9 @@ export default function SettingsScreen({ onBack }) {
           />
         </View>
       )}
-      <View style={styles.row}>
-        <Text onPress={onBack} style={[styles.back, { color: theme.primary }]}>⬅️ Back</Text>
-      </View>
+      <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('About')}>
+        <Text style={[styles.label, { color: theme.primary }]}>About / Profile</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -39,5 +39,4 @@ const styles = StyleSheet.create({
   header: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 10 },
   label: { fontSize: 16 },
-  back: { fontSize: 16 },
 });

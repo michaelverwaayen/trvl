@@ -14,6 +14,7 @@ import SubmitVendorQuote from './SubmitVendorQuote';
 import VendorChatRoom from './VendorChatRoom';
 import AdminDashboardScreen from './AdminDashboardScreen';
 import SettingsScreen from './SettingsScreen';
+import AboutScreen from './AboutScreen';
 import { SUPABASE_URL } from './config';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -25,6 +26,7 @@ const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const VendorStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
+const SettingsStack = createNativeStackNavigator();
 
 const HomePageWrapper = ({ navigation }) => (
   <HomePage
@@ -79,6 +81,19 @@ function VendorStackScreen() {
   );
 }
 
+function SettingsStackScreen() {
+  return (
+    <SettingsStack.Navigator>
+      <SettingsStack.Screen
+        name="SettingsMain"
+        component={SettingsScreen}
+        options={{ headerShown: false }}
+      />
+      <SettingsStack.Screen name="About" component={AboutScreen} />
+    </SettingsStack.Navigator>
+  );
+}
+
 function AuthStackScreen() {
   return (
     <AuthStack.Navigator>
@@ -114,7 +129,7 @@ function MainTabs() {
         <Tab.Screen name="Chat" component={ChatFlowRouter} />
         <Tab.Screen name="Vendor" component={VendorStackScreen} />
         <Tab.Screen name="Admin" component={AdminDashboardScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen name="Settings" component={SettingsStackScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );

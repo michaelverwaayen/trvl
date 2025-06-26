@@ -32,6 +32,7 @@ This project aims to build a mobile application that allows users to request quo
 7. **Progress Indicators**: Visual cues to show quote and job progress.
 8. **Favorite Vendors**: Users can bookmark preferred service providers.
 9. **Map View**: Display vendor locations and distance from the user.
+10. **About/Profile Page**: Users can enter their name and location details.
 
 ---
 This repository now includes an initial React Native scaffold located in the `mobile` directory. Future work will flesh out screens and integrate backend services to manage RFQs, quotes, and vendor management.
