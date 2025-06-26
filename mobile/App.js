@@ -16,11 +16,15 @@ import AdminDashboardScreen from './AdminDashboardScreen';
 import SettingsScreen from './SettingsScreen';
 import { SUPABASE_URL } from './config';
 import { ThemeProvider, useTheme } from './ThemeContext';
+import { AuthProvider, useAuth } from './AuthContext';
+import LoginScreen from './LoginScreen';
+import RegisterScreen from './RegisterScreen';
 console.log('🧪 SUPABASE_URL:', SUPABASE_URL);
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const VendorStack = createNativeStackNavigator();
+const AuthStack = createNativeStackNavigator();
 
 const HomePageWrapper = ({ navigation }) => (
   <HomePage
@@ -75,6 +79,15 @@ function VendorStackScreen() {
   );
 }
 
+function AuthStackScreen() {
+  return (
+    <AuthStack.Navigator>
+      <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
+    </AuthStack.Navigator>
+  );
+}
+
 function MainTabs() {
   const { theme } = useTheme();
   const navTheme = {
@@ -107,6 +120,17 @@ function MainTabs() {
   );
 }
 
+function RootNavigator() {
+  const { session, loading } = useAuth();
+  const { theme } = useTheme();
+  if (loading) return null;
+  return session ? <MainTabs /> : (
+    <NavigationContainer theme={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: theme.background } }}>
+      <AuthStackScreen />
+    </NavigationContainer>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -122,7 +146,9 @@ const styles = StyleSheet.create({
 export default function App() {
   return (
     <ThemeProvider>
-      <MainTabs />
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

@@ -272,7 +272,7 @@ console.log('📦 Open jobs in this category:', debugJobs);
 console.log('🧱 All vendors matching category:', debugVendors);
 if (debugError) console.error('⚠️ Vendor query error:', debugError);
 
-  if (!vendor || !vendor.email) {
+  if (!vendor || !vendor.id) {
     return res.json({ success: false, reason: 'No vendor available' });
   }
 
@@ -281,7 +281,7 @@ if (debugError) console.error('⚠️ Vendor query error:', debugError);
     severity,
     expires_at,
     category,
-    dispatched_vendor_email: vendor.email,
+    dispatched_vendor_id: vendor.id,
     chat_room_id: chatRoomId
   }]);
   if (ticketErr) {
@@ -291,7 +291,7 @@ if (debugError) console.error('⚠️ Vendor query error:', debugError);
 
   const alertText = `🚨 Urgent job assigned in ${category}.\nJoin: https://yourapp.com/chat/${chatRoomId}`;
   await supabase.from('email_alerts').insert([{
-    vendor_email: vendor.email,
+    vendor_id: vendor.id,
     subject: '🚨 Urgent Job Assigned',
     body: alertText
   }]);
