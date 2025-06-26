@@ -11,6 +11,7 @@ import QuoteComparison from './QuoteComparison';
 import EstimateScreen from './EstimateScreen';
 import VendorJobsScreen from './VendorJobsScreen';
 import SubmitVendorQuote from './SubmitVendorQuote';
+import VendorChatRoom from './VendorChatRoom';
 import AdminDashboardScreen from './AdminDashboardScreen';
 import SettingsScreen from './SettingsScreen';
 import { SUPABASE_URL } from './config';
@@ -64,6 +65,11 @@ function VendorStackScreen() {
         name="SubmitVendorQuote"
         component={SubmitVendorQuote}
         options={{ title: 'Submit Quote' }}
+      />
+      <VendorStack.Screen
+        name="VendorChatRoom"
+        component={VendorChatRoom}
+        options={{ title: 'Chat' }}
       />
     </VendorStack.Navigator>
   );
