@@ -41,3 +41,58 @@ create table if not exists user_profiles (
     country text,
     created_at timestamp with time zone default now()
 );
+
+-- Vendors table stores vendor profile and service area
+create table if not exists vendors (
+    id uuid primary key references users(id),
+    email text not null,
+    name text,
+    category text,
+    lat double precision,
+    lon double precision,
+    radius_km numeric,
+    created_at timestamp with time zone default now()
+);
+
+-- Tickets table records submitted repair requests
+create table if not exists tickets (
+    id uuid primary key default gen_random_uuid(),
+    assistant_reply text,
+    severity text,
+    category text,
+    user_location jsonb,
+    image_url text,
+    user_email text,
+    dispatched_vendor_id uuid references vendors(id),
+    chat_room_id uuid,
+    expires_at timestamp with time zone,
+    created_at timestamp with time zone default now()
+);
+
+-- Quotes from vendors for a specific chat log
+create table if not exists quotes (
+    id uuid primary key default gen_random_uuid(),
+    log_id uuid references chat_logs(id),
+    vendor_id uuid references vendors(id),
+    vendor_email text,
+    quote numeric,
+    availability timestamp with time zone,
+    status text,
+    created_at timestamp with time zone default now()
+);
+
+-- Expo push notification tokens
+create table if not exists expo_tokens (
+    token text primary key,
+    created_at timestamp with time zone default now()
+);
+
+-- Email alerts queued for vendors
+create table if not exists email_alerts (
+    id uuid primary key default gen_random_uuid(),
+    vendor_id uuid references vendors(id),
+    subject text,
+    body text,
+    created_at timestamp with time zone default now()
+);
+
