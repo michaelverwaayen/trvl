@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Button } from 'react-native';
+import axios from 'axios';
 import { supabase } from './supabase';
 import RateVendorScreen from './RateVendorScreen';
 
@@ -53,6 +54,23 @@ export default function QuoteComparison({ logId, onBack }) {
     if (quotes.length > 0) fetchRatings();
   }, [quotes]);
 
+  const handleAccept = async item => {
+    try {
+      await supabase.from('quotes').update({ status: 'accepted' }).eq('id', item.id);
+      setQuotes(prev => prev.map(q => q.id === item.id ? { ...q, status: 'accepted' } : q));
+      try {
+        await axios.post('http://localhost:3000/notify-vendor', {
+          vendor_email: item.vendor_email,
+          log_id: item.log_id || logId
+        });
+      } catch (err) {
+        console.error('Push notification failed:', err.message);
+      }
+    } catch (err) {
+      console.error('Accept quote failed:', err.message);
+    }
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.vendor}>{item.vendor_email || 'Unknown Vendor'}</Text>
@@ -64,6 +82,9 @@ export default function QuoteComparison({ logId, onBack }) {
         Available: {item.availability ? new Date(item.availability).toLocaleString() : 'N/A'}
       </Text>
       <Text>Status: {item.status || 'submitted'}</Text>
+      {item.status === 'submitted' && (
+        <Button title="Accept Quote" onPress={() => handleAccept(item)} />
+      )}
       {item.status === 'accepted' && (
         <Button
           title="Mark Completed"
