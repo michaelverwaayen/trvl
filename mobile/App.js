@@ -10,6 +10,7 @@ import ChatFlowRouter from './ChatFlowRouter';
 import QuoteComparison from './QuoteComparison';
 import EstimateScreen from './EstimateScreen';
 import VendorJobsScreen from './VendorJobsScreen';
+import SubmitVendorQuote from './SubmitVendorQuote';
 import AdminDashboardScreen from './AdminDashboardScreen';
 import SettingsScreen from './SettingsScreen';
 import { SUPABASE_URL } from './config';
@@ -18,6 +19,7 @@ console.log('🧪 SUPABASE_URL:', SUPABASE_URL);
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
+const VendorStack = createNativeStackNavigator();
 
 const HomePageWrapper = ({ navigation }) => (
   <HomePage
@@ -50,6 +52,23 @@ function HomeStackScreen() {
   );
 }
 
+function VendorStackScreen() {
+  return (
+    <VendorStack.Navigator>
+      <VendorStack.Screen
+        name="VendorMain"
+        component={VendorJobsScreen}
+        options={{ headerShown: false }}
+      />
+      <VendorStack.Screen
+        name="SubmitVendorQuote"
+        component={SubmitVendorQuote}
+        options={{ title: 'Submit Quote' }}
+      />
+    </VendorStack.Navigator>
+  );
+}
+
 function MainTabs() {
   const { theme } = useTheme();
   const navTheme = {
@@ -74,7 +93,7 @@ function MainTabs() {
       >
         <Tab.Screen name="Home" component={HomeStackScreen} />
         <Tab.Screen name="Chat" component={ChatFlowRouter} />
-        <Tab.Screen name="Vendor" component={VendorJobsScreen} />
+        <Tab.Screen name="Vendor" component={VendorStackScreen} />
         <Tab.Screen name="Admin" component={AdminDashboardScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { SERVER_URL } from './config';
 import { useTheme } from './ThemeContext';
 
@@ -7,6 +8,7 @@ export default function VendorJobsScreen() {
   const [vendorId, setVendorId] = useState('');
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
@@ -32,6 +34,15 @@ export default function VendorJobsScreen() {
       <Text>
         Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}
       </Text>
+      <Button
+        title="Submit Quote"
+        onPress={() =>
+          navigation.navigate('SubmitVendorQuote', {
+            jobId: item.id,
+            vendorId,
+          })
+        }
+      />
     </View>
   );
 
