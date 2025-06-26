@@ -31,3 +31,13 @@ create table if not exists chat_messages (
     message text,
     created_at timestamp with time zone default now()
 );
+
+-- User profile information for storing location
+create table if not exists user_profiles (
+    id uuid primary key references users(id),
+    full_name text,
+    city text,
+    state text,
+    country text,
+    created_at timestamp with time zone default now()
+);

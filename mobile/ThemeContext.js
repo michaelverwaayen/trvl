@@ -7,6 +7,7 @@ const lightTheme = {
   card: '#F9F9F9',
   border: '#CCCCCC',
   primary: '#007AFF',
+  secondary: '#E0E0E0',
 };
 
 const darkTheme = {
@@ -15,6 +16,7 @@ const darkTheme = {
   card: '#1E1E1E',
   border: '#444444',
   primary: '#0A84FF',
+  secondary: '#333333',
 };
 
 const ThemeContext = createContext({
