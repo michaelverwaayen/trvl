@@ -34,6 +34,7 @@ export default function ChatScreen() {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const sessionIdRef = useRef(uuidv4());
+  const flatListRef = useRef(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -57,6 +58,12 @@ export default function ChatScreen() {
     };
     loadMessages();
   }, []);
+
+  useEffect(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
 
   const sendMessage = async (text = null, image = null) => {
     if (!text && !image) return;
@@ -269,6 +276,7 @@ export default function ChatScreen() {
       keyboardVerticalOffset={100}
     >
       <FlatList
+        ref={flatListRef}
         data={messages}
         renderItem={renderItem}
         keyExtractor={(item, idx) => item.id?.toString() || idx.toString()}
