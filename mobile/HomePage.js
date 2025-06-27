@@ -6,6 +6,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
 import BottomTabs from './BottomTabs';
+import SkeletonList from './SkeletonList';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -13,6 +14,7 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const styles = getStyles(theme);
 
   useEffect(() => {
@@ -20,8 +22,10 @@ export default function HomeScreen() {
   }, []);
 
   const fetchVendors = async () => {
+    setLoading(true);
     const { data, error } = await supabase.from('vendors').select('*');
     if (!error && data) setVendors(data);
+    setLoading(false);
   };
 
   const openWebsite = (url) => {
@@ -32,17 +36,21 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Your Requests</Text>
 
-      <FlatList
-        data={requests}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.listItem}>
-            <Text style={styles.listText}>{item.title}</Text>
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No requests found. Start one below!</Text>}
-        style={{ marginBottom: 10 }}
-      />
+      {loading && requests.length === 0 ? (
+        <SkeletonList itemHeight={50} itemCount={3} />
+      ) : (
+        <FlatList
+          data={requests}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.listItem}>
+              <Text style={styles.listText}>{item.title}</Text>
+            </View>
+          )}
+          ListEmptyComponent={<Text style={styles.emptyText}>No requests found. Start one below!</Text>}
+          style={{ marginBottom: 10 }}
+        />
+      )}
 
       <View style={styles.card}>
         <TextInput
@@ -78,24 +86,28 @@ export default function HomeScreen() {
       </View>
 
       <Text style={styles.subtitle}>Nearby Vendors</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
-        {vendors.map((vendor) => (
-          <TouchableOpacity
-            key={vendor.id}
-            onPress={() => openWebsite(vendor.website)}
-            style={styles.vendorCard}
-          >
-            {vendor.image_url ? (
-              <Image source={{ uri: vendor.image_url }} style={styles.vendorImage} />
-            ) : (
-              <View style={styles.vendorImagePlaceholder}><Text style={{ color: '#888' }}>No Image</Text></View>
-            )}
-            <Text style={styles.vendorName}>{vendor.name}</Text>
-            <Text style={styles.vendorCategory}>{vendor.category}</Text>
-            <Text style={styles.vendorEmail}>{vendor.email}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {loading && vendors.length === 0 ? (
+        <SkeletonList itemHeight={150} itemCount={3} />
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+          {vendors.map((vendor) => (
+            <TouchableOpacity
+              key={vendor.id}
+              onPress={() => openWebsite(vendor.website)}
+              style={styles.vendorCard}
+            >
+              {vendor.image_url ? (
+                <Image source={{ uri: vendor.image_url }} style={styles.vendorImage} />
+              ) : (
+                <View style={styles.vendorImagePlaceholder}><Text style={{ color: '#888' }}>No Image</Text></View>
+              )}
+              <Text style={styles.vendorName}>{vendor.name}</Text>
+              <Text style={styles.vendorCategory}>{vendor.category}</Text>
+              <Text style={styles.vendorEmail}>{vendor.email}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       <BottomTabs />
     </View>
