@@ -1,376 +1,241 @@
-// HomePage.js
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Button,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  TextInput,
-  ScrollView
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useTheme } from './ThemeContext';
-import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
-import { supabase } from './supabase';
-import { useAuth } from './AuthContext';
-import { Picker } from 'react-native';
-import { SERVER_URL } from './config';
-import * as Location from 'expo-location';
+  // HomeScreen.js - Redesigned with chat history and vendor carousel
 
-export default function HomePage({ onStartNewRequest, onSelectJob, onOpenSettings, onGetEstimate }) {
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image, Linking } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { useTheme } from './ThemeContext';
+import { supabase } from './supabase';
+import BottomTabs from './components/BottomTabs';
+
+export default function HomeScreen() {
   const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const [category, setCategory] = useState('Plumbing');
+  const [search, setSearch] = useState('');
+  const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
-  const [loadingVendors, setLoadingVendors] = useState(false);
-  const [chats, setChats] = useState([]);
-  const [loadingChats, setLoadingChats] = useState(true);
-  const { user } = useAuth();
+  const styles = getStyles(theme);
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
 
   const fetchVendors = async () => {
-    setLoadingVendors(true);
-    try {
-      let locParams = '';
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const pos = await Location.getCurrentPositionAsync({});
-        locParams = `&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
-      }
-      const res = await fetch(
-        `${SERVER_URL}/available_vendors?category=${selectedCategory}${locParams}`
-      );
-      const data = await res.json();
-      setVendors(data || []);
-    } catch (err) {
-      console.error('Vendor fetch error', err);
-      setVendors([]);
-    } finally {
-      setLoadingVendors(false);
-    }
+    const { data, error } = await supabase.from('vendors').select('*');
+    if (!error && data) setVendors(data);
   };
 
-  const dispatchVendor = async vendorId => {
-    const res = await fetch(`${SERVER_URL}/dispatch_urgent_vendor`, {
-      method: 'POST',
-      body: JSON.stringify({
-        chat_history: 'Urgent help requested',
-        category: selectedCategory,
-        vendor_id: vendorId
-      }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const json = await res.json();
-    if (json.success) {
-      alert('Vendor dispatched!');
-      setVendors([]);
-    } else {
-      alert('No vendor available.');
-    }
+  const openWebsite = (url) => {
+    if (url) Linking.openURL(url);
   };
-
-  const fetchChats = async () => {
-    if (!user?.email) {
-      setLoadingChats(false);
-      return;
-    }
-    setLoadingChats(true);
-    try {
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('user_email', user.email)
-        .not('chat_room_id', 'is', null)
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Chat fetch error', error);
-      } else {
-        setChats(data || []);
-      }
-    } catch (err) {
-      console.error('Chat fetch exception', err);
-    } finally {
-      setLoadingChats(false);
-    }
-  };
-
-
-  const statusColors = {
-    open: '#FFA500',
-    quoted: '#007AFF',
-    completed: '#28A745'
-  };
-
-  useEffect(() => {
-    const registerForPush = async () => {
-      const { status: existing } = await Notifications.getPermissionsAsync();
-      let finalStatus = existing;
-      if (existing !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') {
-        console.log('Push permissions denied');
-        return;
-      }
-
-      const tokenData = await Notifications.getExpoPushTokenAsync();
-      const token = tokenData.data;
-      await supabase.from('expo_tokens').upsert({ token });
-
-      Notifications.addNotificationReceivedListener(notification => {
-        console.log('🔔 Notification received', notification);
-      });
-    };
-
-    registerForPush();
-  }, []);
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('chat_logs')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('❌ Supabase error:', error.message);
-          setError(error.message);
-        } else {
-          setJobs(data || []);
-        }
-      } catch (err) {
-        console.error('❌ Unexpected error fetching jobs:', err);
-        setError('Something went wrong while fetching your requests.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJobs();
-    fetchChats();
-  }, []);
-
-  const categories = ['All', ...Array.from(new Set(jobs.map(j => j.category).filter(Boolean)))];
-  const vendorCategories = ['All', 'plumbing', 'electrical', 'general'];
-  const filteredJobs = jobs.filter(j => {
-    const matchesSearch = j.assistant_reply?.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || j.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const renderItem = ({ item }) => (
-    <TouchableOpacity onPress={() => onSelectJob && onSelectJob(item.id)}>
-      <View style={styles.jobCard}>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: statusColors[item.status] || '#999' }
-          ]}
-        >
-          <Text style={styles.badgeText}>{item.status || 'open'}</Text>
-        </View>
-        <Text style={styles.summary}>
-          Summary: {item.assistant_reply || 'No summary'}
-        </Text>
-        <Text>Category: {item.category || 'N/A'}</Text>
-        <Text>
-          Created:{' '}
-          {item.created_at
-            ? new Date(item.created_at).toLocaleString()
-            : 'Unknown'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderChatItem = ({ item }) => (
-    <View style={styles.jobCard}>
-      <Text style={styles.summary}>Chat: {item.assistant_reply?.slice(0, 60) || 'No summary'}</Text>
-      <Text>{new Date(item.created_at).toLocaleString()}</Text>
-    </View>
-  );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.header}>🧾 Your Requests</Text>
-        <TouchableOpacity onPress={onOpenSettings} style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={24} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-      
-      <TextInput
-        placeholder="Search requests..."
-        value={search}
-        onChangeText={setSearch}
-        style={styles.searchInput}
-        placeholderTextColor={theme.text}
+    <View style={styles.container}>
+      <Text style={styles.title}>Your Requests</Text>
+
+      <FlatList
+        data={requests}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.listItem}>
+            <Text style={styles.listText}>{item.title}</Text>
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.emptyText}>No requests found. Start one below!</Text>}
+        style={{ marginBottom: 10 }}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
-        {categories.map(cat => (
+      <View style={styles.card}>
+        <TextInput
+          style={styles.input}
+          placeholder="Search requests..."
+          placeholderTextColor={theme.placeholder}
+          value={search}
+          onChangeText={setSearch}
+        />
+
+        <Text style={styles.subtitle}>Start a new request</Text>
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>Get Estimate</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.buttonSecondary}>
+          <Text style={styles.buttonText}>Get Urgent Help</Text>
+        </TouchableOpacity>
+
+        <Picker
+          selectedValue={category}
+          onValueChange={setCategory}
+          style={styles.picker}
+          dropdownIconColor={theme.text}
+        >
+          <Picker.Item label="Plumbing" value="Plumbing" />
+          <Picker.Item label="Electrical" value="Electrical" />
+          <Picker.Item label="Cleaning" value="Cleaning" />
+        </Picker>
+
+        <TouchableOpacity style={styles.buttonAlt}>
+          <Text style={styles.buttonAltText}>Find Vendors</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.subtitle}>Nearby Vendors</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+        {vendors.map((vendor) => (
           <TouchableOpacity
-            key={cat}
-            onPress={() => setSelectedCategory(cat)}
-            style={[
-              styles.chip,
-              selectedCategory === cat && styles.selectedChip
-            ]}
+            key={vendor.id}
+            onPress={() => openWebsite(vendor.website)}
+            style={styles.vendorCard}
           >
-            <Text style={{ color: selectedCategory === cat ? '#fff' : theme.text }}>
-              {cat}
-            </Text>
+            {vendor.image_url ? (
+              <Image source={{ uri: vendor.image_url }} style={styles.vendorImage} />
+            ) : (
+              <View style={styles.vendorImagePlaceholder}><Text style={{ color: '#888' }}>No Image</Text></View>
+            )}
+            <Text style={styles.vendorName}>{vendor.name}</Text>
+            <Text style={styles.vendorCategory}>{vendor.category}</Text>
+            <Text style={styles.vendorEmail}>{vendor.email}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {loading ? (
-        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
-      ) : error ? (
-        <Text style={styles.error}>Error: {error}</Text>
-      ) : jobs.length === 0 ? (
-        <Text style={styles.empty}>No requests found. Start one above!</Text>
-      ) : (
-        <FlatList
-          data={filteredJobs}
-          keyExtractor={(item, index) => item.id?.toString() || index.toString()}
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        />
-      )}
-
-      <Button title="Get Estimate" onPress={onGetEstimate} />
-
-      <View style={{ marginTop: 20 }}>
-        <Text style={styles.sectionHeader}>Nearby Vendors</Text>
-        <Picker
-          selectedValue={selectedCategory}
-          onValueChange={itemValue => setSelectedCategory(itemValue)}
-        >
-          {vendorCategories.map(cat => (
-            <Picker.Item key={cat} label={cat} value={cat} />
-          ))}
-        </Picker>
-        <Button title="Search" onPress={fetchVendors} />
-        {loadingVendors && <ActivityIndicator style={{ marginTop: 10 }} />}
-        {vendors.map(v => (
-          <TouchableOpacity
-            key={v.id}
-            style={styles.vendorItem}
-            onPress={() => dispatchVendor(v.id)}
-          >
-            <Text>{v.name || v.email}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {loadingChats ? (
-        <ActivityIndicator style={{ marginTop: 20 }} />
-      ) : chats.length > 0 ? (
-        <View style={{ marginTop: 20 }}>
-          <Text style={styles.sectionHeader}>Active Chats</Text>
-          <FlatList
-            data={chats}
-            keyExtractor={(item, idx) => item.id?.toString() || idx.toString()}
-            renderItem={renderChatItem}
-          />
-        </View>
-      ) : null}
-
-      <TouchableOpacity style={styles.fab} onPress={onStartNewRequest}>
-        <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
-
+      <BottomTabs />
     </View>
   );
 }
 
-const getStyles = (theme) =>
-  StyleSheet.create({
-    container: { flex: 1, padding: 20, paddingBottom: 80 },
-    headerContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 10
-    },
-    header: { fontSize: 24, fontWeight: 'bold', color: theme.text },
-    settingsButton: {
-      padding: 8
-    },
-    jobCard: {
-      padding: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginVertical: 6,
-      borderRadius: 6,
-      backgroundColor: theme.card,
-    },
-    statusBadge: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 12,
-      marginBottom: 4,
-    },
-    badgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-    summary: { fontWeight: 'bold', marginBottom: 4 },
-    error: { color: 'red', marginTop: 20 },
-    empty: { marginTop: 20, fontStyle: 'italic', color: theme.text },
-    searchInput: {
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 6,
-      padding: 8,
-      marginTop: 10,
-      color: theme.text
-    },
-    chip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginRight: 8,
-      backgroundColor: theme.card
-    },
-    selectedChip: {
-      backgroundColor: theme.primary,
-      borderColor: theme.primary
-    },
-    vendorItem: {
-      padding: 10,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginTop: 8,
-      borderRadius: 6,
-      backgroundColor: theme.card
-    },
-    sectionHeader: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 6,
-      color: theme.text
-    },
-    fab: {
-      position: 'absolute',
-      right: 20,
-      bottom: 20,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: theme.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 4
-    }
-  });
+const getStyles = theme => StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f9f9f9'
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: theme.text,
+    marginBottom: 20
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 5,
+    color: theme.text
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    color: theme.text
+  },
+  picker: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginTop: 10,
+    marginBottom: 20
+  },
+  button: {
+    backgroundColor: '#4285F4',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  buttonSecondary: {
+    backgroundColor: '#34A853',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16
+  },
+  buttonAlt: {
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center'
+  },
+  buttonAltText: {
+    color: '#333',
+    fontWeight: '600'
+  },
+  listItem: {
+    padding: 14,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginVertical: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1
+  },
+  listText: {
+    fontSize: 16,
+    color: theme.text
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#888',
+    marginTop: 20
+  },
+  vendorCard: {
+    width: 180,
+    marginRight: 14,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  vendorImage: {
+    width: '100%',
+    height: 100,
+    borderRadius: 10,
+    marginBottom: 8
+  },
+  vendorImagePlaceholder: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#eee',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8
+  },
+  vendorName: {
+    fontWeight: '700',
+    fontSize: 16,
+    color: theme.text
+  },
+  vendorCategory: {
+    color: '#777',
+    fontSize: 14,
+    marginBottom: 4
+  },
+  vendorEmail: {
+    color: '#4285F4',
+    fontSize: 13
+  }
+});
