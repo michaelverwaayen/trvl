@@ -1,7 +1,8 @@
   // HomeScreen.js - Redesigned with chat history and vendor carousel
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image, Linking } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from './ThemeContext';
@@ -11,6 +12,7 @@ import SkeletonList from './SkeletonList';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [category, setCategory] = useState('Plumbing');
   const [search, setSearch] = useState('');
   const [requests, setRequests] = useState([]); // historical chat
@@ -38,10 +40,6 @@ export default function HomeScreen() {
       setVendors(withRating);
     }
     setLoading(false);
-  };
-
-  const openWebsite = (url) => {
-    if (url) Linking.openURL(url);
   };
 
   return (
@@ -105,7 +103,7 @@ export default function HomeScreen() {
           {vendors.map((vendor) => (
             <TouchableOpacity
               key={vendor.id}
-              onPress={() => openWebsite(vendor.website)}
+              onPress={() => navigation.navigate('VendorDetails', { vendor })}
               style={styles.vendorCard}
             >
               {vendor.image_url ? (

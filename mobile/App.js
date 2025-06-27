@@ -15,6 +15,7 @@ import VendorChatRoom from './VendorChatRoom';
 import AdminDashboardScreen from './AdminDashboardScreen';
 import SettingsScreen from './SettingsScreen';
 import AboutScreen from './AboutScreen';
+import VendorDetailScreen from './VendorDetailScreen';
 import { SUPABASE_URL } from './config';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -54,6 +55,11 @@ function HomeStackScreen() {
         name="Estimate"
         component={EstimateScreen}
         options={{ title: 'Estimate' }}
+      />
+      <HomeStack.Screen
+        name="VendorDetails"
+        component={VendorDetailScreen}
+        options={{ title: 'Vendor' }}
       />
     </HomeStack.Navigator>
   );
