@@ -12,7 +12,13 @@ export default {
     backgroundColor: '#ffffff',
     plugins: ['expo-notifications'],
     android: {
-      useNextNotificationsApi: true
+      useNextNotificationsApi: true,
+      permissions: ['ACCESS_FINE_LOCATION']
+    },
+    ios: {
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription: 'Allow location to find nearby vendors'
+      }
     },
     updates: {
       fallbackToCacheTimeout: 0
