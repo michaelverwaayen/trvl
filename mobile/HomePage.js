@@ -90,7 +90,10 @@ export default function HomeScreen() {
           <Picker.Item label="Cleaning" value="Cleaning" />
         </Picker>
 
-        <TouchableOpacity style={styles.buttonAlt}>
+        <TouchableOpacity
+          style={styles.buttonAlt}
+          onPress={() => navigation.navigate('VendorMap')}
+        >
           <Text style={styles.buttonAltText}>Find Vendors</Text>
         </TouchableOpacity>
       </View>

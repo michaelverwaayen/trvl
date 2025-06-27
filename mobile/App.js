@@ -21,6 +21,7 @@ import { ThemeProvider, useTheme } from './ThemeContext';
 import { AuthProvider, useAuth } from './AuthContext';
 import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
+import VendorMapScreen from './VendorMapScreen';
 console.log('🧪 SUPABASE_URL:', SUPABASE_URL);
 
 const Tab = createBottomTabNavigator();
@@ -60,6 +61,11 @@ function HomeStackScreen() {
         name="VendorDetails"
         component={VendorDetailScreen}
         options={{ title: 'Vendor' }}
+      />
+      <HomeStack.Screen
+        name="VendorMap"
+        component={VendorMapScreen}
+        options={{ title: 'Vendor Map' }}
       />
     </HomeStack.Navigator>
   );
