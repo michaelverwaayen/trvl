@@ -5,7 +5,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollVi
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
-import BottomTabs from './components/BottomTabs';
+import BottomTabs from './BottomTabs';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
