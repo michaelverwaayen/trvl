@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image, Linking } from 'react-native';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
@@ -23,8 +24,19 @@ export default function HomeScreen() {
 
   const fetchVendors = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('vendors').select('*');
-    if (!error && data) setVendors(data);
+    const { data, error } = await supabase
+      .from('vendors')
+      .select('*, reviews(rating)');
+
+    if (!error && data) {
+      const withRating = data.map((v) => {
+        const avg = v.reviews && v.reviews.length
+          ? v.reviews.reduce((s, r) => s + r.rating, 0) / v.reviews.length
+          : 0;
+        return { ...v, average_rating: avg };
+      });
+      setVendors(withRating);
+    }
     setLoading(false);
   };
 
@@ -103,6 +115,17 @@ export default function HomeScreen() {
               )}
               <Text style={styles.vendorName}>{vendor.name}</Text>
               <Text style={styles.vendorCategory}>{vendor.category}</Text>
+              <View style={styles.ratingRow}>
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <FontAwesome
+                    key={idx}
+                    name={idx < Math.round(vendor.average_rating || 0) ? 'star' : 'star-o'}
+                    size={14}
+                    color="#FFD700"
+                    style={{ marginRight: 2 }}
+                  />
+                ))}
+              </View>
               <Text style={styles.vendorEmail}>{vendor.email}</Text>
             </TouchableOpacity>
           ))}
@@ -245,6 +268,10 @@ const getStyles = theme => StyleSheet.create({
     color: '#777',
     fontSize: 14,
     marginBottom: 4
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
   },
   vendorEmail: {
     color: '#4285F4',
