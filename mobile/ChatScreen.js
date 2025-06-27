@@ -31,6 +31,8 @@ export default function ChatScreen() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const userAvatar = 'https://i.pravatar.cc/100?img=11';
+  const assistantAvatar = 'https://i.pravatar.cc/100?img=12';
   const { theme } = useTheme();
   const styles = getStyles(theme);
   const sessionIdRef = useRef(uuidv4());
@@ -245,25 +247,38 @@ export default function ChatScreen() {
     }
   };
 
-  const renderItem = ({ item, index }) => (
-    <View
-      key={item.id || index}
-      style={[styles.message, item.role === 'user' ? styles.user : styles.assistant]}
-    >
-      {item.type === 'image' && item.content ? (
-        <Image source={{ uri: item.content }} style={styles.image} />
-      ) : (
-        <Text style={item.role === 'user' ? styles.userText : styles.assistantText}>
-          {item.content || '⚠️ Empty message'}
-        </Text>
-      )}
-      {item.timestamp && (
-        <Text style={styles.timestamp}>
-          {new Date(item.timestamp).toLocaleTimeString()}
-        </Text>
-      )}
-    </View>
-  );
+  const renderItem = ({ item, index }) => {
+    const isUser = item.role === 'user';
+    const avatarSource = { uri: isUser ? userAvatar : assistantAvatar };
+    return (
+      <View
+        key={item.id || index}
+        style={[
+          styles.bubbleRow,
+          isUser ? styles.alignRight : styles.alignLeft,
+        ]}
+      >
+        {!isUser && <Image source={avatarSource} style={styles.avatar} />}
+        <View
+          style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}
+        >
+          {item.type === 'image' && item.content ? (
+            <Image source={{ uri: item.content }} style={styles.image} />
+          ) : (
+            <Text style={isUser ? styles.userText : styles.assistantText}>
+              {item.content || '⚠️ Empty message'}
+            </Text>
+          )}
+          {item.timestamp && (
+            <Text style={styles.timestamp}>
+              {new Date(item.timestamp).toLocaleTimeString()}
+            </Text>
+          )}
+        </View>
+        {isUser && <Image source={avatarSource} style={styles.avatar} />}
+      </View>
+    );
+  };
 
   if (inUrgentChat && urgentChatId) {
     return <ChatRoom chatRoomId={urgentChatId} sender="user@example.com" />;
@@ -319,15 +334,18 @@ export default function ChatScreen() {
 const getStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, padding: 10, paddingTop: 50, backgroundColor: theme.background },
-    message: { padding: 10, marginVertical: 5, borderRadius: 8, maxWidth: '80%' },
-    user: { alignSelf: 'flex-end', backgroundColor: theme.primary },
-    assistant: { alignSelf: 'flex-start', backgroundColor: theme.card },
+    bubbleRow: { flexDirection: 'row', alignItems: 'flex-end', marginVertical: 5 },
+    alignRight: { justifyContent: 'flex-end' },
+    alignLeft: { justifyContent: 'flex-start' },
+    bubble: { padding: 10, borderRadius: 16, maxWidth: '70%' },
+    userBubble: { backgroundColor: theme.primary, marginLeft: 8 },
+    assistantBubble: { backgroundColor: theme.card, marginRight: 8 },
     inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
     input: { flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 5, padding: 10, marginRight: 5, color: theme.text },
     image: { width: 150, height: 150, borderRadius: 8 },
     imageBtn: { marginLeft: 5, padding: 8 },
-    manualRow: { marginTop: 10 },
-    userText: { color: '#FFFFFF', textAlign: 'right' },
-    assistantText: { color: '#FFA500', textAlign: 'left' },
+    userText: { color: '#FFFFFF' },
+    assistantText: { color: theme.text },
+    avatar: { width: 32, height: 32, borderRadius: 16 },
     timestamp: { fontSize: 10, color: theme.text, marginTop: 4, textAlign: 'right' },
   });
