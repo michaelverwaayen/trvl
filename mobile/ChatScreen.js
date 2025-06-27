@@ -22,7 +22,8 @@ import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 
-export default function ChatScreen() {
+export default function ChatScreen({ onManualSubmit }) {
+  const manualSubmit = onManualSubmit || (() => {});
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -31,6 +32,9 @@ export default function ChatScreen() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [questionCount, setQuestionCount] = useState(0);
+  const [photoRequested, setPhotoRequested] = useState(false);
+  const [showQuoteButton, setShowQuoteButton] = useState(false);
   const userAvatar = 'https://i.pravatar.cc/100?img=11';
   const assistantAvatar = 'https://i.pravatar.cc/100?img=12';
   const { theme } = useTheme();
@@ -148,6 +152,20 @@ export default function ChatScreen() {
         }
 
         fullResponse += event.data;
+        const lower = event.data.toLowerCase();
+        if (lower.includes('?')) {
+          setQuestionCount(c => {
+            const newCount = c + 1;
+            if (newCount >= 4 && (photoRequested || lower.includes('photo') || lower.includes('picture') || lower.includes('image'))) {
+              setShowQuoteButton(true);
+            }
+            return newCount;
+          });
+        }
+        if (lower.includes('photo') || lower.includes('picture') || lower.includes('image')) {
+          setPhotoRequested(true);
+          setShowQuoteButton(q => q || questionCount >= 4);
+        }
         setMessages(prev => {
           const last = prev[prev.length - 1];
           if (!firstAssistantChunk && last?.role === 'assistant') {
@@ -164,6 +182,7 @@ export default function ChatScreen() {
             },
           ];
         });
+        // show button if conditions met after message append
       };
 
       eventSource.onerror = (e) => {
@@ -244,6 +263,10 @@ export default function ChatScreen() {
     if (!result.canceled) {
       const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
       sendMessage(null, base64Image);
+      setPhotoRequested(true);
+      if (questionCount >= 4) {
+        setShowQuoteButton(true);
+      }
     }
   };
 
@@ -310,6 +333,12 @@ export default function ChatScreen() {
           <Text style={{ fontSize: 20 }}>📷</Text>
         </TouchableOpacity>
       </View>
+
+      {showQuoteButton && (
+        <View style={{ marginTop: 10 }}>
+          <Button title="Request Quotes" onPress={manualSubmit} />
+        </View>
+      )}
 
       {showCategoryDropdown && (
         <Picker

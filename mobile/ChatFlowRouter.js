@@ -53,7 +53,9 @@ export default function ChatFlowRouter({ onBackToHome }) {
       const res = await axios.post('http://localhost:3000/submit-rfq', editedTicket);
       console.log('RFQ submitted:', res.data);
       setShowReview(false);
-      onBackToHome();
+      if (onBackToHome) {
+        onBackToHome();
+      }
     } catch (err) {
       console.error('Error submitting RFQ:', err);
       alert('Failed to submit RFQ. Please try again.');
