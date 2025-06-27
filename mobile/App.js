@@ -1,5 +1,5 @@
 // File: App.js
-import React from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -121,8 +121,12 @@ function MainTabs() {
     ...DefaultTheme,
     colors: { ...DefaultTheme.colors, background: theme.background },
   };
+  const navigationRef = useRef(null);
+  const backToHome = () => {
+    navigationRef.current?.navigate('Home');
+  };
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -138,7 +142,9 @@ function MainTabs() {
         })}
       >
         <Tab.Screen name="Home" component={HomeStackScreen} />
-        <Tab.Screen name="Chat" component={ChatFlowRouter} />
+        <Tab.Screen name="Chat">
+          {() => <ChatFlowRouter onBackToHome={backToHome} />}
+        </Tab.Screen>
         <Tab.Screen name="Vendor" component={VendorStackScreen} />
         <Tab.Screen name="Admin" component={AdminDashboardScreen} />
         <Tab.Screen name="Settings" component={SettingsStackScreen} />
