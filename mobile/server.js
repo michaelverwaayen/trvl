@@ -319,6 +319,34 @@ app.post('/submit-rfq', async (req, res) => {
   }
 });
 
+// === /notify-vendor ===
+app.post('/notify-vendor', async (req, res) => {
+  const { vendor_email, log_id } = req.body;
+  if (!vendor_email) {
+    return res.status(400).json({ success: false, error: 'Missing vendor_email' });
+  }
+
+  try {
+    const { data: vendor, error } = await supabase
+      .from('vendors')
+      .select('id')
+      .eq('email', vendor_email)
+      .single();
+
+    if (error || !vendor) throw error || new Error('Vendor not found');
+
+    const subject = 'Quote Accepted';
+    const body = `Your quote was accepted for request ${log_id}`;
+
+    await supabase.from('email_alerts').insert([{ vendor_id: vendor.id, subject, body }]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Notify vendor failed:', err);
+    res.status(500).json({ success: false, error: 'Failed to notify vendor' });
+  }
+});
+
 // === /register-token ===
 app.post('/register-token', async (req, res) => {
   const { token } = req.body;
