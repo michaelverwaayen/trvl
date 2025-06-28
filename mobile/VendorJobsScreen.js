@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Button, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SERVER_URL } from './config';
+import { supabase } from './supabase';
 import { useTheme } from './ThemeContext';
 import { useAuth } from './AuthContext';
 
 export default function VendorJobsScreen() {
   const { user } = useAuth();
   const vendorId = user?.id;
+  const vendorEmail = user?.email;
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
@@ -20,7 +22,18 @@ export default function VendorJobsScreen() {
     try {
       const res = await fetch(`${SERVER_URL}/jobs-for-vendor/${vendorId}`);
       const data = await res.json();
-      setJobs(data || []);
+      let jobsWithStatus = data || [];
+      if (vendorEmail) {
+        const { data: accepted } = await supabase
+          .from('quotes')
+          .select('id, log_id, status')
+          .eq('vendor_email', vendorEmail)
+          .in('status', ['accepted', 'completed']);
+        const map = {};
+        (accepted || []).forEach(q => { map[q.log_id] = q; });
+        jobsWithStatus = jobsWithStatus.map(j => ({ ...j, acceptedQuote: map[j.id] }));
+      }
+      setJobs(jobsWithStatus);
     } catch (err) {
       console.error('Vendor jobs fetch error', err);
       setJobs([]);
@@ -30,6 +43,19 @@ export default function VendorJobsScreen() {
   };
 
   useEffect(() => { fetchJobs(); }, [vendorId]);
+
+  const handleComplete = async quoteId => {
+    try {
+      await fetch(`${SERVER_URL}/complete-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId })
+      });
+      fetchJobs();
+    } catch (err) {
+      console.error('Complete job failed', err);
+    }
+  };
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
@@ -55,6 +81,12 @@ export default function VendorJobsScreen() {
               vendorId,
             })
           }
+        />
+      )}
+      {item.acceptedQuote && item.acceptedQuote.status === 'accepted' && (
+        <Button
+          title="Mark Completed"
+          onPress={() => handleComplete(item.acceptedQuote.id)}
         />
       )}
     </View>

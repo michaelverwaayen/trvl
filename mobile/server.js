@@ -347,6 +347,33 @@ app.post('/notify-vendor', async (req, res) => {
   }
 });
 
+// === /complete-job ===
+app.post('/complete-job', async (req, res) => {
+  const { quoteId, jobId } = req.body;
+  if (!quoteId && !jobId) {
+    return res.status(400).json({ success: false, error: 'Missing job or quote id' });
+  }
+  try {
+    let logId = jobId;
+    if (quoteId) {
+      const { data: quote } = await supabase
+        .from('quotes')
+        .select('log_id')
+        .eq('id', quoteId)
+        .maybeSingle();
+      await supabase.from('quotes').update({ status: 'completed' }).eq('id', quoteId);
+      if (quote && quote.log_id) logId = quote.log_id;
+    }
+    if (logId) {
+      await supabase.from('chat_logs').update({ status: 'completed' }).eq('id', logId);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Complete job failed:', err);
+    res.status(500).json({ success: false });
+  }
+});
+
 // === /register-token ===
 app.post('/register-token', async (req, res) => {
   const { token } = req.body;

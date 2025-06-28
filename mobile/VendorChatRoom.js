@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Button, StyleSheet } from 'react-native';
 import { supabase } from './supabase';
+import { SERVER_URL } from './config';
 
 export default function VendorChatRoom({ route }) {
   const { chatRoomId, vendorEmail } = route.params || {};
@@ -10,6 +11,8 @@ export default function VendorChatRoom({ route }) {
   const [input, setInput] = useState('');
   const [quote, setQuote] = useState('');
   const [availability, setAvailability] = useState('');
+  const [acceptedQuote, setAcceptedQuote] = useState(null);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -36,6 +39,23 @@ export default function VendorChatRoom({ route }) {
     return () => supabase.removeChannel(channel);
   }, [chatRoomId]);
 
+  useEffect(() => {
+    const fetchAccepted = async () => {
+      const { data } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('log_id', chatRoomId)
+        .eq('vendor_email', vendorEmail)
+        .in('status', ['accepted', 'completed'])
+        .maybeSingle();
+      if (data) {
+        setAcceptedQuote(data);
+        if (data.status === 'completed') setCompleted(true);
+      }
+    };
+    fetchAccepted();
+  }, [chatRoomId, vendorEmail]);
+
   const sendMessage = async () => {
     if (!input.trim()) return;
     await supabase.from('chat_messages').insert({
@@ -59,6 +79,20 @@ export default function VendorChatRoom({ route }) {
       alert('Quote submitted!');
       setQuote('');
       setAvailability('');
+    }
+  };
+
+  const markCompleted = async () => {
+    if (!acceptedQuote) return;
+    try {
+      await fetch(`${SERVER_URL}/complete-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId: acceptedQuote.id })
+      });
+      setCompleted(true);
+    } catch (err) {
+      console.error('Mark completed failed:', err);
     }
   };
 
@@ -100,6 +134,11 @@ export default function VendorChatRoom({ route }) {
           placeholder="Availability (YYYY-MM-DD)"
         />
         <Button title="Submit" onPress={submitQuote} />
+        {acceptedQuote && !completed && (
+          <View style={{ marginTop: 10 }}>
+            <Button title="Mark Completed" onPress={markCompleted} />
+          </View>
+        )}
       </View>
     </View>
   );
