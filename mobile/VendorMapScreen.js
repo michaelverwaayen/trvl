@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, ActivityIndicator, StyleSheet, Text, Platform } from 'react-native';
+let MapView, Marker;
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+}
 import * as Location from 'expo-location';
 import { supabase } from './supabase';
 import { useNavigation } from '@react-navigation/native';
@@ -44,6 +49,14 @@ export default function VendorMapScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.centered}>
+        <Text>Map view is only available on mobile.</Text>
       </View>
     );
   }
