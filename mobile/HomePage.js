@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from './ThemeContext';
-import { supabase } from './supabase';
+import { SERVER_URL } from './config';
 import BottomTabs from './BottomTabs';
 import SkeletonList from './SkeletonList';
 
@@ -22,24 +22,21 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchVendors();
-  }, []);
+  }, [category]);
 
   const fetchVendors = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('vendors')
-      .select('*, reviews(rating)');
-
-    if (!error && data) {
-      const withRating = data.map((v) => {
-        const avg = v.reviews && v.reviews.length
-          ? v.reviews.reduce((s, r) => s + r.rating, 0) / v.reviews.length
-          : 0;
-        return { ...v, average_rating: avg };
-      });
-      setVendors(withRating);
+    try {
+      const params = new URLSearchParams();
+      if (category) params.append('category', category);
+      const res = await fetch(`${SERVER_URL}/available_vendors?${params.toString()}`);
+      const data = await res.json();
+      setVendors(data || []);
+    } catch (err) {
+      console.error('Vendor fetch failed:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

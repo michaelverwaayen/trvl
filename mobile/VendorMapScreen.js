@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { supabase } from './supabase';
+import { SERVER_URL } from './config';
 import { useNavigation } from '@react-navigation/native';
 
 export default function VendorMapScreen() {
@@ -20,24 +20,28 @@ export default function VendorMapScreen() {
       }
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
-      fetchVendors();
+      fetchVendors(loc.coords);
     })();
   }, []);
 
-  const fetchVendors = async () => {
-    const { data, error } = await supabase
-      .from('vendors')
-      .select('*, reviews(rating)');
-    if (!error && data) {
-      const withRating = data.map((v) => {
-        const avg = v.reviews && v.reviews.length
-          ? v.reviews.reduce((s, r) => s + r.rating, 0) / v.reviews.length
-          : 0;
-        return { ...v, average_rating: avg };
-      });
-      setVendors(withRating);
+  const fetchVendors = async (coords) => {
+    try {
+      let url = `${SERVER_URL}/available_vendors`;
+      if (coords) {
+        const params = new URLSearchParams({
+          lat: String(coords.latitude),
+          lon: String(coords.longitude),
+        });
+        url += `?${params.toString()}`;
+      }
+      const res = await fetch(url);
+      const data = await res.json();
+      setVendors(data || []);
+    } catch (err) {
+      console.error('Vendor fetch failed:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (!location || loading) {
