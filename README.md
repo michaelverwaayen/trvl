@@ -31,7 +31,8 @@ This project aims to build a mobile application that allows users to request quo
 6. **Localization**: Plan for multiple languages to broaden user base.
 7. **Progress Indicators**: Visual cues to show quote and job progress.
 8. **Favorite Vendors**: Users can bookmark preferred service providers.
-9. **Map View**: Display vendor locations and distance from the user.
+9. **Map View**: Display vendor locations and distance from the user. Mobile uses
+   `react-native-maps` while the web build falls back to `react-leaflet`.
 10. **About/Profile Page**: Users can enter their name and location details.
 11. **Active Chats Section**: List ongoing vendor chats directly on the home page.
 12. **Vendor Filtering**: Search nearby vendors by category and distance.
