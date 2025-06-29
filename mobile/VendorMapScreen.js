@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, Platform } from 'react-native';
-let MapView, Marker;
+let MapView, Marker, MapContainer, TileLayer, Popup;
 if (Platform.OS !== 'web') {
   const Maps = require('react-native-maps');
   MapView = Maps.default;
   Marker = Maps.Marker;
+} else {
+  const RL = require('react-leaflet');
+  MapContainer = RL.MapContainer;
+  TileLayer = RL.TileLayer;
+  Marker = RL.Marker;
+  Popup = RL.Popup;
 }
 import * as Location from 'expo-location';
 import { supabase } from './supabase';
@@ -55,9 +61,31 @@ export default function VendorMapScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.centered}>
-        <Text>Map view is only available on mobile.</Text>
-      </View>
+      <MapContainer
+        center={[location.latitude, location.longitude]}
+        zoom={13}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <Marker position={[location.latitude, location.longitude]}>
+          <Popup>You are here</Popup>
+        </Marker>
+        {vendors.map(
+          (v) =>
+            v.lat &&
+            v.lon && (
+              <Marker
+                key={v.id}
+                position={[v.lat, v.lon]}
+                eventHandlers={{
+                  click: () => navigation.navigate('VendorDetails', { vendor: v }),
+                }}
+              >
+                <Popup>{v.name}</Popup>
+              </Marker>
+            )
+        )}
+      </MapContainer>
     );
   }
 
