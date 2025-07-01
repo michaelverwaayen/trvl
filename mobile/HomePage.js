@@ -7,7 +7,6 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from './ThemeContext';
 import { supabase } from './supabase';
-import BottomTabs from './BottomTabs';
 import SkeletonList from './SkeletonList';
 
 export default function HomeScreen() {
@@ -133,7 +132,6 @@ export default function HomeScreen() {
         </ScrollView>
       )}
 
-      <BottomTabs />
     </View>
   );
 }
