@@ -72,12 +72,13 @@ export default function ChatScreen({ onManualSubmit }) {
   }, [messages]);
 
   const sendMessage = async (text = null, image = null) => {
-    if (!text && !image) return;
+    const trimmed = text ? text.trim() : '';
+    if (!trimmed && !image) return;
 
     let query = '';
     try {
       query = new URLSearchParams({
-        text: text || '',
+        text: trimmed || '',
         image: image || '',
       }).toString();
     } catch (e) {
@@ -93,15 +94,19 @@ export default function ChatScreen({ onManualSubmit }) {
     const userMessage = {
       role: 'user',
       type: image ? 'image' : 'text',
-      content: text || image,
+      content: trimmed || image,
       timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMessage]);
-    supabase.from('chat_messages').insert({
-      chat_room_id: sessionIdRef.current,
-      sender: 'user',
-      message: text || image || ''
-    });
+    try {
+      await supabase.from('chat_messages').insert({
+        chat_room_id: sessionIdRef.current,
+        sender: 'user',
+        message: trimmed || image || ''
+      });
+    } catch (err) {
+      console.error('Failed to log user message:', err);
+    }
     setInput('');
     setSending(true);
 
@@ -127,11 +132,15 @@ export default function ChatScreen({ onManualSubmit }) {
               timestamp: new Date().toISOString(),
             },
           ]);
-          supabase.from('chat_messages').insert({
-            chat_room_id: sessionIdRef.current,
-            sender: 'assistant',
-            message: 'Sorry, the server timed out.'
-          });
+          try {
+            await supabase.from('chat_messages').insert({
+              chat_room_id: sessionIdRef.current,
+              sender: 'assistant',
+              message: 'Sorry, the server timed out.'
+            });
+          } catch (err) {
+            console.error('Failed to log timeout message:', err);
+          }
         }
       }, 30000);
 
@@ -143,11 +152,15 @@ export default function ChatScreen({ onManualSubmit }) {
           clearTimeout(timeoutId);
           setSending(false);
           eventSource.close();
-          supabase.from('chat_messages').insert({
-            chat_room_id: sessionIdRef.current,
-            sender: 'assistant',
-            message: fullResponse
-          });
+          try {
+            await supabase.from('chat_messages').insert({
+              chat_room_id: sessionIdRef.current,
+              sender: 'assistant',
+              message: fullResponse
+            });
+          } catch (err) {
+            console.error('Failed to log assistant message:', err);
+          }
           return;
         }
 
@@ -197,11 +210,15 @@ export default function ChatScreen({ onManualSubmit }) {
               timestamp: new Date().toISOString(),
             },
           ]);
-          supabase.from('chat_messages').insert({
-            chat_room_id: sessionIdRef.current,
-            sender: 'assistant',
-            message: 'There was a connection issue. Please try again.'
-          });
+          try {
+            await supabase.from('chat_messages').insert({
+              chat_room_id: sessionIdRef.current,
+              sender: 'assistant',
+              message: 'There was a connection issue. Please try again.'
+            });
+          } catch (err) {
+            console.error('Failed to log connection issue:', err);
+          }
           clearTimeout(timeoutId);
           setSending(false);
           eventSource.close();
@@ -218,11 +235,15 @@ export default function ChatScreen({ onManualSubmit }) {
           timestamp: new Date().toISOString(),
         },
       ]);
-      supabase.from('chat_messages').insert({
-        chat_room_id: sessionIdRef.current,
-        sender: 'assistant',
-        message: 'Something went wrong. Please try again.'
-      });
+      try {
+        await supabase.from('chat_messages').insert({
+          chat_room_id: sessionIdRef.current,
+          sender: 'assistant',
+          message: 'Something went wrong. Please try again.'
+        });
+      } catch (err2) {
+        console.error('Failed to log error message:', err2);
+      }
       setSending(false);
     }
   };
@@ -326,6 +347,7 @@ export default function ChatScreen({ onManualSubmit }) {
           placeholder="Describe your issue..."
           value={input}
           onChangeText={setInput}
+          onSubmitEditing={() => sendMessage(input)}
           editable={!sending}
         />
         <Button title="Send" onPress={() => sendMessage(input)} disabled={sending} />

@@ -57,13 +57,18 @@ export default function VendorChatRoom({ route }) {
   }, [chatRoomId, vendorEmail]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
-    await supabase.from('chat_messages').insert({
-      chat_room_id: chatRoomId,
-      sender: vendorEmail,
-      message: input
-    });
-    setInput('');
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    try {
+      await supabase.from('chat_messages').insert({
+        chat_room_id: chatRoomId,
+        sender: vendorEmail,
+        message: trimmed
+      });
+      setInput('');
+    } catch (err) {
+      console.error('Message send failed:', err);
+    }
   };
 
   const submitQuote = async () => {
@@ -113,6 +118,7 @@ export default function VendorChatRoom({ route }) {
           style={styles.input}
           value={input}
           onChangeText={setInput}
+          onSubmitEditing={sendMessage}
           placeholder="Type your reply..."
         />
         <Button title="Send" onPress={sendMessage} />

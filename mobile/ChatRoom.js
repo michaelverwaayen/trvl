@@ -59,13 +59,18 @@ export default function ChatRoom({ chatRoomId, sender }) {
   }, [chatRoomId]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
-    await supabase.from('chat_messages').insert({
-      chat_room_id: chatRoomId,
-      sender,
-      message: input
-    });
-    setInput('');
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    try {
+      await supabase.from('chat_messages').insert({
+        chat_room_id: chatRoomId,
+        sender,
+        message: trimmed
+      });
+      setInput('');
+    } catch (err) {
+      console.error('Message send failed:', err);
+    }
   };
 
   return (
@@ -81,6 +86,7 @@ export default function ChatRoom({ chatRoomId, sender }) {
       <input
         value={input}
         onChange={e => setInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && sendMessage()}
         placeholder="Type a message..."
         style={{ width: '80%', marginRight: 10 }}
       />
