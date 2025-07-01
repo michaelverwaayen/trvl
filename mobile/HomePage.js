@@ -17,7 +17,9 @@ export default function HomeScreen() {
   const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const filteredVendors = category ? vendors.filter(v => v.category === category) : vendors;
+  const filteredVendors = category === 'All'
+    ? vendors
+    : vendors.filter(v => v.category === category);
   const styles = getStyles(theme);
 
   useEffect(() => {
