@@ -12,7 +12,7 @@ import SkeletonList from './SkeletonList';
 export default function HomeScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
-  const [category, setCategory] = useState('Plumbing');
+  const [category, setCategory] = useState('All');
   const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,13 +20,15 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchVendors();
-  }, []);
+  }, [category]);
 
   const fetchVendors = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('vendors')
-      .select('*, reviews(rating)');
+    let query = supabase.from('vendors').select('*, reviews(rating)');
+    if (category !== 'All') {
+      query = query.eq('category', category);
+    }
+    const { data, error } = await query;
 
     if (!error && data) {
       const withRating = data.map((v) => {
@@ -70,23 +72,24 @@ export default function HomeScreen() {
           <Text style={styles.buttonText}>Get Urgent Help</Text>
         </TouchableOpacity>
 
-        <Picker
-          selectedValue={category}
-          onValueChange={setCategory}
-          style={styles.picker}
-          dropdownIconColor={theme.text}
-        >
-          <Picker.Item label="Plumbing" value="Plumbing" />
-          <Picker.Item label="Electrical" value="Electrical" />
-          <Picker.Item label="Cleaning" value="Cleaning" />
-        </Picker>
-
         <TouchableOpacity
           style={styles.buttonAlt}
           onPress={() => navigation.navigate('VendorMap')}
         >
           <Text style={styles.buttonAltText}>Find Vendors</Text>
         </TouchableOpacity>
+
+        <Picker
+          selectedValue={category}
+          onValueChange={setCategory}
+          style={styles.picker}
+          dropdownIconColor={theme.text}
+        >
+          <Picker.Item label="All" value="All" />
+          <Picker.Item label="Plumbing" value="Plumbing" />
+          <Picker.Item label="Electrical" value="Electrical" />
+          <Picker.Item label="Cleaning" value="Cleaning" />
+        </Picker>
       </View>
 
       <Text style={styles.subtitle}>Nearby Vendors</Text>
