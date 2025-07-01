@@ -1,7 +1,7 @@
   // HomeScreen.js - Redesigned with chat history and vendor carousel
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
@@ -13,7 +13,6 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const [category, setCategory] = useState('Plumbing');
-  const [search, setSearch] = useState('');
   const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,13 +61,6 @@ export default function HomeScreen() {
       )}
 
       <View style={styles.card}>
-        <TextInput
-          style={styles.input}
-          placeholder="Search requests..."
-          placeholderTextColor={theme.placeholder}
-          value={search}
-          onChangeText={setSearch}
-        />
 
         <Text style={styles.subtitle}>Start a new request</Text>
         <TouchableOpacity style={styles.button}>
@@ -164,14 +156,6 @@ const getStyles = theme => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    color: theme.text
   },
   picker: {
     borderWidth: 1,
