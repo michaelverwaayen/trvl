@@ -16,6 +16,7 @@ export default function HomeScreen() {
   const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const filteredVendors = category ? vendors.filter(v => v.category === category) : vendors;
   const styles = getStyles(theme);
 
   useEffect(() => {
@@ -70,6 +71,13 @@ export default function HomeScreen() {
           <Text style={styles.buttonText}>Get Urgent Help</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.buttonAlt}
+          onPress={() => navigation.navigate('VendorMap')}
+        >
+          <Text style={styles.buttonAltText}>Find Vendors</Text>
+        </TouchableOpacity>
+
         <Picker
           selectedValue={category}
           onValueChange={setCategory}
@@ -80,48 +88,45 @@ export default function HomeScreen() {
           <Picker.Item label="Electrical" value="Electrical" />
           <Picker.Item label="Cleaning" value="Cleaning" />
         </Picker>
-
-        <TouchableOpacity
-          style={styles.buttonAlt}
-          onPress={() => navigation.navigate('VendorMap')}
-        >
-          <Text style={styles.buttonAltText}>Find Vendors</Text>
-        </TouchableOpacity>
       </View>
 
       <Text style={styles.subtitle}>Nearby Vendors</Text>
       {loading && vendors.length === 0 ? (
         <SkeletonList itemHeight={150} itemCount={3} />
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
-          {vendors.map((vendor) => (
-            <TouchableOpacity
-              key={vendor.id}
-              onPress={() => navigation.navigate('VendorDetails', { vendor })}
-              style={styles.vendorCard}
-            >
-              {vendor.image_url ? (
-                <Image source={{ uri: vendor.image_url }} style={styles.vendorImage} />
-              ) : (
-                <View style={styles.vendorImagePlaceholder}><Text style={{ color: '#888' }}>No Image</Text></View>
-              )}
-              <Text style={styles.vendorName}>{vendor.name}</Text>
-              <Text style={styles.vendorCategory}>{vendor.category}</Text>
-              <View style={styles.ratingRow}>
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <FontAwesome
-                    key={idx}
-                    name={idx < Math.round(vendor.average_rating || 0) ? 'star' : 'star-o'}
-                    size={14}
-                    color="#FFD700"
-                    style={{ marginRight: 2 }}
-                  />
-                ))}
-              </View>
-              <Text style={styles.vendorEmail}>{vendor.email}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        filteredVendors.length === 0 ? (
+          <Text style={styles.emptyText}>No vendors found for {category}</Text>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+            {filteredVendors.map((vendor) => (
+              <TouchableOpacity
+                key={vendor.id}
+                onPress={() => navigation.navigate('VendorDetails', { vendor })}
+                style={styles.vendorCard}
+              >
+                {vendor.image_url ? (
+                  <Image source={{ uri: vendor.image_url }} style={styles.vendorImage} />
+                ) : (
+                  <View style={styles.vendorImagePlaceholder}><Text style={{ color: '#888' }}>No Image</Text></View>
+                )}
+                <Text style={styles.vendorName}>{vendor.name}</Text>
+                <Text style={styles.vendorCategory}>{vendor.category}</Text>
+                <View style={styles.ratingRow}>
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <FontAwesome
+                      key={idx}
+                      name={idx < Math.round(vendor.average_rating || 0) ? 'star' : 'star-o'}
+                      size={14}
+                      color="#FFD700"
+                      style={{ marginRight: 2 }}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.vendorEmail}>{vendor.email}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )
       )}
 
     </View>
