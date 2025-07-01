@@ -17,6 +17,7 @@ export default function HomeScreen() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const styles = getStyles(theme);
+  const filteredVendors = vendors.filter(v => v.category === category);
 
   useEffect(() => {
     fetchVendors();
@@ -70,6 +71,13 @@ export default function HomeScreen() {
           <Text style={styles.buttonText}>Get Urgent Help</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.buttonAlt}
+          onPress={() => navigation.navigate('VendorMap')}
+        >
+          <Text style={styles.buttonAltText}>Find Vendors</Text>
+        </TouchableOpacity>
+
         <Picker
           selectedValue={category}
           onValueChange={setCategory}
@@ -80,13 +88,6 @@ export default function HomeScreen() {
           <Picker.Item label="Electrical" value="Electrical" />
           <Picker.Item label="Cleaning" value="Cleaning" />
         </Picker>
-
-        <TouchableOpacity
-          style={styles.buttonAlt}
-          onPress={() => navigation.navigate('VendorMap')}
-        >
-          <Text style={styles.buttonAltText}>Find Vendors</Text>
-        </TouchableOpacity>
       </View>
 
       <Text style={styles.subtitle}>Nearby Vendors</Text>
@@ -94,7 +95,7 @@ export default function HomeScreen() {
         <SkeletonList itemHeight={150} itemCount={3} />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
-          {vendors.map((vendor) => (
+          {filteredVendors.map((vendor) => (
             <TouchableOpacity
               key={vendor.id}
               onPress={() => navigation.navigate('VendorDetails', { vendor })}
