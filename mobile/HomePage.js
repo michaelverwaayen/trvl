@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const [category, setCategory] = useState('All');
+  const [categories, setCategories] = useState([]);
   const [requests, setRequests] = useState([]); // historical chat
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,22 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchVendors();
   }, [category]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('category')
+        .neq('category', null)
+        .neq('category', '')
+        .order('category', { ascending: true });
+      if (!error && data) {
+        const unique = [...new Set(data.map(v => v.category))];
+        setCategories(unique);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const fetchVendors = async () => {
     setLoading(true);
@@ -87,9 +104,9 @@ export default function HomeScreen() {
           dropdownIconColor={theme.text}
         >
           <Picker.Item label="All" value="All" />
-          <Picker.Item label="Plumbing" value="Plumbing" />
-          <Picker.Item label="Electrical" value="Electrical" />
-          <Picker.Item label="Cleaning" value="Cleaning" />
+          {categories.map((cat) => (
+            <Picker.Item key={cat} label={cat} value={cat} />
+          ))}
         </Picker>
       </View>
 
