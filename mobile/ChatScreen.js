@@ -118,7 +118,7 @@ export default function ChatScreen({ onManualSubmit }) {
       let fullResponse = '';
       let done = false;
 
-      const timeoutId = setTimeout(() => {
+      const timeoutId = setTimeout(async () => {
         if (!done) {
           console.warn('⏰ SSE timed out. Closing connection.');
           eventSource.close();
@@ -145,7 +145,7 @@ export default function ChatScreen({ onManualSubmit }) {
       }, 30000);
 
       let firstAssistantChunk = true;
-      eventSource.onmessage = (event) => {
+      eventSource.onmessage = async (event) => {
         if (done) return;
         if (event.data === '[DONE]') {
           done = true;
@@ -198,7 +198,7 @@ export default function ChatScreen({ onManualSubmit }) {
         // show button if conditions met after message append
       };
 
-      eventSource.onerror = (e) => {
+      eventSource.onerror = async (e) => {
         if (!done) {
           console.error('🔥 SSE stream error:', e);
           setMessages(prev => [
